@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using MessagePack;
 using SignalRems.Core.Interfaces;
+using SignalRems.Core.Utils;
 using SignalRems.Server.Data;
 using SignalRems.Server.Exceptions;
 
@@ -7,20 +9,27 @@ namespace SignalRems.Server;
 
 internal sealed class RpcService : IRpcService
 {
-    private readonly ConcurrentDictionary<(Type, Type), Func<IRpcRequest, Task<IRpcResponse>>> _handlers = new();
+    private readonly ConcurrentDictionary<(string, string), Func<byte[], Task<byte[]>>> _handlers = new();
     private bool _running = true;
     private bool _started = false;
 
     public void RegisterHandler<TRequest, TResponse>(IRpcHandler<TRequest, TResponse> handler)
         where TResponse : IRpcResponse where TRequest : IRpcRequest
     {
-        async Task<IRpcResponse> Process(IRpcRequest request)
+        var requestType = typeof(TRequest).FullName;
+        var responseType = typeof(TResponse).FullName;
+        if (responseType == null || requestType == null)
         {
-            var req = (TRequest)request;
-            return await handler.HandleRequest(req);
+            throw new NotSupportedException("Invalid requestBytes/response type");
+        }
+        async Task<byte[]> Process(byte[] requestBytes)
+        {
+            var req = await MessagePackUtil.FromBinaryAsync<TRequest>(requestBytes);
+            var result = await handler.HandleRequest(req);
+            return await MessagePackUtil.ToBinaryAsync(result);
         }
 
-        _handlers[(typeof(TRequest), typeof(TResponse))] = Process;
+        _handlers[(requestType, responseType)] = Process;
     }
 
     public void Start()
@@ -46,7 +55,7 @@ internal sealed class RpcService : IRpcService
                     var key = (command.RequestType, command.ResponseType);
                     if (!_handlers.ContainsKey(key))
                     {
-                        command.Response.SetResult((null, InvalidRequestException.Instance));
+                        command.Response.SetResult((null, $"{command.RequestType}/{command.ResponseType} is not supported"));
                     }
                     else
                     {
@@ -60,7 +69,7 @@ internal sealed class RpcService : IRpcService
                             }
                             catch (Exception e)
                             {
-                                command.Response.SetResult((null, e));
+                                command.Response.SetResult((null, e.Message));
                             }
                         });
                     }

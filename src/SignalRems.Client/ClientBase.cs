@@ -28,10 +28,10 @@ public abstract class ClientBase : IClient
             throw new InvalidOperationException("Connection already connected");
         }
 
-        var address = url + endpoint;
+        Url = url + endpoint;
         Connection = new HubConnectionBuilder()
-            .WithUrl(address)
-            .WithAutomaticReconnect(new RetryPolicy(Logger, address))
+            .WithUrl(Url)
+            .WithAutomaticReconnect(new RetryPolicy(Logger, Url))
             .AddMessagePackProtocol()
             .Build();
         Connection.Reconnecting += ConnectionOnReconnecting;
@@ -77,6 +77,8 @@ public abstract class ClientBase : IClient
     #region protected
 
     protected HubConnection? Connection { get; private set; }
+
+    protected string? Url { get; private set; }
 
     protected ILogger Logger { get; }
 

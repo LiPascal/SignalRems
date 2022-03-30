@@ -35,7 +35,7 @@ public class Worker : BackgroundService
             _logger.LogInformation("User({user})'s age is {age}", request1.UserId, response1.UserAge);
             _logger.LogInformation("Checking user({user})'s name", request2.UserId);
             var response2 = await _rpcClient.SendAsync<GetUserNameRequest, GetUserNameResponse>(request2);
-            _logger.LogInformation("User({user})'s age is {name}", request2.UserId, response2.UserName);
+            _logger.LogInformation("User({user})'s name is {name}", request2.UserId, response2.UserName);
 
             ++i;
             await Task.Delay(1000, stoppingToken);
