@@ -2,9 +2,9 @@
 
 namespace SignalRems.Server.Data
 {
-    internal class ClientCommand
+    internal class SubscriptionCommand
     {
-        public ClientCommand(SubscriptionContext context, string commandName, TaskCompletionSource<Exception?> completeSource, params object[] parameters)
+        public SubscriptionCommand(SubscriptionContext context, string commandName, TaskCompletionSource<Exception?> completeSource, params object[] parameters)
         {
             Context = context;
             CommandName = commandName;

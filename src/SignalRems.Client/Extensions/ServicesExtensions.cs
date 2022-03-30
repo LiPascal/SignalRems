@@ -8,6 +8,7 @@ public static class ServicesExtensions
     public static IServiceCollection AddSignalRemsClient(this IServiceCollection service)
     {
         service.AddScoped<ISubscriberClient, SubscriberClient>();
+        service.AddScoped<IRpcClient, RpcClient>();
         return service;
     }
 

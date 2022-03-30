@@ -1,30 +1,23 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using SignalRems.Core.Interfaces;
 using SignalRems.Core.Models;
 using SignalRems.Server.Data;
 
-namespace SignalRems.Server;
+namespace SignalRems.Server.Hubs;
 
 internal class PubSubHub : Hub
 {
-    private readonly ContextManager _contextManager;
-
-    public PubSubHub(ContextManager contextManager)
-    {
-        _contextManager = contextManager;
-    }
 
     #region override
 
     public override async Task OnConnectedAsync()
     {
-        _contextManager.Clients[Context.ConnectionId] = new ClientStatus(Context.ConnectionId);
+        SubscriptionClient.Clients[Context.ConnectionId] = new SubscriptionClient(Context.ConnectionId);
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? e)
     {
-        _contextManager.Clients[Context.ConnectionId].IsConnected = false;
+        SubscriptionClient.Clients[Context.ConnectionId].IsConnected = false;
         await base.OnDisconnectedAsync(e);
     }
 
@@ -42,7 +35,7 @@ internal class PubSubHub : Hub
         }
 
         var tcs = new TaskCompletionSource<Exception?>();
-        _contextManager.Clients[Context.ConnectionId].PendingCommands.Enqueue(new ClientCommand(clientSubscriptionContext,
+        SubscriptionClient.Clients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.GetSnapshotAndSubscribe, tcs, filterJson));
         return await tcs.Task;
     }
@@ -52,7 +45,7 @@ internal class PubSubHub : Hub
     {
         var clientSubscriptionContext = GetClientSubscriptionContext(subscriptionId, Context.ConnectionId, topic);
         var tcs = new TaskCompletionSource<Exception?>();
-        _contextManager.Clients[Context.ConnectionId].PendingCommands.Enqueue(new ClientCommand(clientSubscriptionContext,
+        SubscriptionClient.Clients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.GetSnapshot, tcs, filterJson));
         return await tcs.Task;
     }
@@ -67,7 +60,7 @@ internal class PubSubHub : Hub
         }
 
         var tcs = new TaskCompletionSource<Exception?>();
-        _contextManager.Clients[Context.ConnectionId].PendingCommands.Enqueue(new ClientCommand(clientSubscriptionContext,
+        SubscriptionClient.Clients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.Subscribe, tcs, filterJson));
         return await tcs.Task;
     }
@@ -75,13 +68,13 @@ internal class PubSubHub : Hub
     // ReSharper disable once UnusedMember.Global
     public async Task<Exception?> UnSubscribe(string subscriptionId)
     {
-        if (!_contextManager.Subscriptions.TryGetValue(subscriptionId, out var clientSubscriptionContext) || !clientSubscriptionContext.IsSubscribing)
+        if (!SubscriptionContext.Subscriptions.TryGetValue(subscriptionId, out var clientSubscriptionContext) || !clientSubscriptionContext.IsSubscribing)
         {
             return new InvalidOperationException("Invalid action, the subscription is not running");
         }
 
         var tcs = new TaskCompletionSource<Exception?>();
-        _contextManager.Clients[Context.ConnectionId].PendingCommands.Enqueue(new ClientCommand(clientSubscriptionContext,
+        SubscriptionClient.Clients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.UnSubscribe, tcs));
         return await tcs.Task;
     }
@@ -90,17 +83,16 @@ internal class PubSubHub : Hub
 
     #region private
 
-    private SubscriptionContext GetClientSubscriptionContext(string subscriptionId, string clientId, string topic)
+    private static SubscriptionContext GetClientSubscriptionContext(string subscriptionId, string clientId, string topic)
     {
-        var client = _contextManager.Clients[clientId];
-        var subscriptionContext = _contextManager.Subscriptions.GetOrAdd(subscriptionId, t => new SubscriptionContext(subscriptionId, client.ClientId, topic));
+        var client = SubscriptionClient.Clients[clientId];
+        var subscriptionContext = SubscriptionContext.Subscriptions.GetOrAdd(subscriptionId, t => new SubscriptionContext(subscriptionId, client.ClientId, topic));
 
         if (subscriptionContext.ClientId != clientId)
         {
-            if (_contextManager.Clients.ContainsKey(subscriptionContext.ClientId))
+            if (SubscriptionClient.Clients.ContainsKey(subscriptionContext.ClientId))
             {
-                _contextManager.Clients[subscriptionContext.ClientId].SubscriptionContexts
-                    .TryRemove(subscriptionId, out _);
+                SubscriptionClient.Clients[subscriptionContext.ClientId].SubscriptionContexts.TryRemove(subscriptionId, out _);
             }
             //It happens when client reconnect;
             subscriptionContext.ClientId = clientId;

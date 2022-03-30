@@ -7,75 +7,30 @@ using SignalRems.Core.Interfaces;
 
 namespace SignalRems.Client;
 
-internal sealed class SubscriberClient : ISubscriberClient
+internal sealed class SubscriberClient : ClientBase, ISubscriberClient
 {
-    private HubConnection? _connection;
-    private readonly ILogger<SubscriberClient> _logger;
     private readonly List<ISubscription> _subscriptions = new();
 
-    public SubscriberClient(ILogger<SubscriberClient> logger)
+    public SubscriberClient(ILogger<SubscriberClient> logger) : base(logger)
     {
-        _logger = logger;
-        ConnectionStatus = ConnectionStatus.Disconnected;
     }
 
 
     #region interface ISubscriberClient
 
-    public async Task ConnectAsync(string url, string endpoint, CancellationToken token)
-    {
-        ChangeConnectionStatus(ConnectionStatus.Connecting);
-        if (_connection != null)
-        {
-            throw new InvalidOperationException("Connection already connected");
-        }
-
-        var address = url + endpoint;
-        _connection = new HubConnectionBuilder()
-            .WithUrl(address)
-            .WithAutomaticReconnect(new RetryPolicy(_logger, address))
-            .AddMessagePackProtocol()
-            .Build();
-        _connection.Reconnecting += ConnectionOnReconnecting;
-        _connection.Reconnected += ConnectionOnReconnected;
-        _connection.Closed += ConnectionOnClosed;
-        var retryAfter = 1;
-        while (true)
-        {
-            try
-            {
-                await _connection.StartAsync(token);
-                ChangeConnectionStatus(ConnectionStatus.Connected);
-                return;
-            }
-            catch when (token.IsCancellationRequested)
-            {
-                _connection = null;
-                ChangeConnectionStatus(ConnectionStatus.Disconnected);
-                return;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to connect server. Retry after {sec} seconds", retryAfter);
-                await Task.Delay(retryAfter * 1000, new CancellationToken());
-                retryAfter = Math.Min(retryAfter * 2, 60);
-            }
-        }
-    }
-
-    public async Task<IDisposable> SubscribeAsync<T>(string topic, IMessageHandler<T> handler,
+    public async Task<IDisposable> SubscribeAsync<T>(string topic, ISubscriptionHandler<T> handler,
         Expression<Func<T, bool>>? filter = null) where T : class, new()
     {
-        if (_connection == null)
+        if (Connection == null)
         {
             throw new InvalidOperationException("Not connected to server");
         }
 
-        var subscription = new Subscription<T>(_connection, topic, handler, filter);
+        var subscription = new Subscription<T>(Connection, topic, handler, filter);
         await subscription.StartAsync();
         lock (subscription)
         {
-            if (_connection == null)
+            if (Connection == null)
             {
                 subscription.Dispose();
                 return subscription;
@@ -87,19 +42,14 @@ internal sealed class SubscriberClient : ISubscriberClient
         return subscription;
     }
 
-    public event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
-    public ConnectionStatus ConnectionStatus { get; private set; }
+    #endregion
 
-    public async void Dispose()
+    #region override
+
+    protected override void DoDispose()
     {
+        base.DoDispose();
         List<IDisposable> toDisposables = new();
-        if (_connection != null)
-        {
-            var connection = _connection;
-            _connection = null;
-            await connection.DisposeAsync();
-        }
-
         lock (_subscriptions)
         {
             toDisposables.AddRange(_subscriptions);
@@ -111,14 +61,9 @@ internal sealed class SubscriberClient : ISubscriberClient
         }
     }
 
-    #endregion
-
-    #region private
-
-    private async Task ConnectionOnReconnected(string? arg)
+    protected override async Task ConnectionOnReconnected(string? newId)
     {
-        _logger.LogWarning("Reconnected");
-        ChangeConnectionStatus(ConnectionStatus.Connected);
+        await base.ConnectionOnReconnected(newId);
         ISubscription[] subscriptions;
         lock (_subscriptions)
         {
@@ -132,16 +77,10 @@ internal sealed class SubscriberClient : ISubscriberClient
         }
     }
 
-    private Task ConnectionOnReconnecting(Exception? arg)
+    protected override async Task ConnectionOnClosed(Exception? exception)
     {
-        _logger.LogWarning("Disconnected, retrying to re-connect");
-        ChangeConnectionStatus(ConnectionStatus.Connecting);
-        return Task.CompletedTask;
-    }
+        await base.ConnectionOnClosed(exception);
 
-    private Task ConnectionOnClosed(Exception? arg)
-    {
-        _logger.LogWarning("Lost connection to server.");
         ISubscription[] subscriptions;
         lock (_subscriptions)
         {
@@ -152,17 +91,6 @@ internal sealed class SubscriberClient : ISubscriberClient
         {
             subscription.Closed();
         }
-
-        _connection = null;
-        ChangeConnectionStatus(ConnectionStatus.Disconnected);
-        return Task.CompletedTask;
-    }
-
-    private void ChangeConnectionStatus(ConnectionStatus status)
-    {
-        var handler = ConnectionStatusChanged;
-        ConnectionStatus = status;
-        handler?.Invoke(this, new ConnectionStatusChangedEventArgs(status));
     }
 
     #endregion

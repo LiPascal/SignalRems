@@ -1,6 +1,6 @@
 ﻿namespace SignalRems.Core.Interfaces;
 
-public interface IMessageHandler<in T> where T : class, new()
+public interface ISubscriptionHandler<in T> where T : class, new()
 {
     void OnSnapshotBegin();
 

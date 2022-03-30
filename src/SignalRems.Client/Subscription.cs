@@ -16,13 +16,13 @@ internal class Subscription<T> : ISubscription where T : class, new()
 {
     private readonly HubConnection _connection;
     private readonly string _topic;
-    private readonly IMessageHandler<T> _handler;
+    private readonly ISubscriptionHandler<T> _handler;
     private readonly Expression<Func<T, bool>>? _filter;
     private readonly string _subscriptionId = Guid.NewGuid().ToString();
     private readonly List<IDisposable> _listeners = new();
     private bool _isSubscribing;
 
-    public Subscription(HubConnection connection, string topic, IMessageHandler<T> handler, Expression<Func<T, bool>>? filter)
+    public Subscription(HubConnection connection, string topic, ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
     {
         _connection = connection;
         _topic = topic;

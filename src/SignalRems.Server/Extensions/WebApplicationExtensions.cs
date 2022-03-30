@@ -1,5 +1,6 @@
 ﻿using SignalRems.Core.Interfaces;
 using SignalRems.Server.Data;
+using SignalRems.Server.Hubs;
 
 namespace SignalRems.Server.Extensions;
 
@@ -9,12 +10,17 @@ public static class WebApplicationExtensions
     {
         service.AddSignalR().AddMessagePackProtocol();
         service.AddSingleton<IPublisherService, PublisherService>();
-        service.AddSingleton<ContextManager>();
+        service.AddSingleton<IRpcService, RpcService>();
         return service;
     }
 
-    public static void MapSignalRemsHub(this WebApplication app, string endpoint)
+    public static void MapSignalRemsPublisherHub(this WebApplication app, string endpoint)
     {
         app.MapHub<PubSubHub>(endpoint);
+    }
+
+    public static void MapSignalRemsRpcHub(this WebApplication app, string endpoint)
+    {
+        app.MapHub<RpcHub>(endpoint);
     }
 }

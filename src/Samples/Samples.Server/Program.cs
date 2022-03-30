@@ -3,7 +3,9 @@ using SignalRems.Server.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalRemsService();
+builder.Services.AddSingleton<UserInfoQueryHandler>();
 builder.Services.AddHostedService<Worker>();
 var app = builder.Build();
-app.MapSignalRemsHub("/signalr/ems/example");
+app.MapSignalRemsPublisherHub("/signalr/ems/example/pubsub");
+app.MapSignalRemsRpcHub("/signalr/ems/example/rpc");
 app.Run();

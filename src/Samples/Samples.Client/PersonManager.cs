@@ -3,7 +3,7 @@ using SignalRems.Core.Interfaces;
 
 namespace Samples.Client;
 
-internal class PersonManager : IMessageHandler<Person>
+internal class PersonManager : ISubscriptionHandler<Person>
 {
     private readonly ILogger<PersonManager> _logger;
 
