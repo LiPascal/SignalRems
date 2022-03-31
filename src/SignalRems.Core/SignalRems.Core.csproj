@@ -9,6 +9,7 @@
     <FileVersion>0.1.0</FileVersion>
     <AssemblyVersion>0.1.0</AssemblyVersion>
     <BaseOutputPath>..\..\build</BaseOutputPath>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
