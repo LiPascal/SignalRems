@@ -16,6 +16,11 @@ internal sealed class RpcService : IRpcService
     public void RegisterHandler<TRequest, TResponse>(IRpcHandler<TRequest, TResponse> handler)
         where TResponse : IRpcResponse where TRequest : IRpcRequest
     {
+        RegisterHandler<TRequest, TResponse>(async request => await handler.HandleRequest(request));
+    }
+
+    public void RegisterHandler<TRequest, TResponse>(Func<TRequest, Task<TResponse>> handleFunc) where TRequest : IRpcRequest where TResponse : IRpcResponse
+    {
         var requestType = typeof(TRequest).FullName;
         var responseType = typeof(TResponse).FullName;
         if (responseType == null || requestType == null)
@@ -25,7 +30,7 @@ internal sealed class RpcService : IRpcService
         async Task<byte[]> Process(byte[] requestBytes)
         {
             var req = await MessagePackUtil.FromBinaryAsync<TRequest>(requestBytes);
-            var result = await handler.HandleRequest(req);
+            var result = await handleFunc(req);
             return await MessagePackUtil.ToBinaryAsync(result);
         }
 
