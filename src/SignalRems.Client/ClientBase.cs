@@ -32,7 +32,6 @@ public abstract class ClientBase : IClient
         Connection = new HubConnectionBuilder()
             .WithUrl(Url)
             .WithAutomaticReconnect(new RetryPolicy(Logger, Url))
-            .AddMessagePackProtocol()
             .Build();
         Connection.Reconnecting += ConnectionOnReconnecting;
         Connection.Reconnected += ConnectionOnReconnected;

@@ -1,19 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Pascal Li</Authors>
-    <Version>0.1.1</Version>
-    <FileVersion>0.1.1</FileVersion>
-    <AssemblyVersion>0.1.1</AssemblyVersion>
+    <Version>0.1.2-preview</Version>
+    <FileVersion>0.1.2</FileVersion>
+    <AssemblyVersion>0.1.2</AssemblyVersion>
     <BaseOutputPath>..\..\build</BaseOutputPath>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="6.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Serialize.Linq" Version="2.0.0" />
   </ItemGroup>
 

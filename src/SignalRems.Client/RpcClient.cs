@@ -29,23 +29,23 @@ internal class RpcClient : ClientBase, IRpcClient
             return new TResponse { RequestId = request.RequestId, Success = false, Error = NotConnectedError };
         }
 
-        Logger.LogInformation("Send Request to {url}: {req_id} {req}", Url, request.RequestId, request);
-        var requestBytes = await MessagePackUtil.ToBinaryAsync(request);
+        var requestJson = JsonUtil.ToJson(request);
+        Logger.LogInformation("Send Request to {url}: {req_id} {req}", Url, request.RequestId, requestJson);
+        var result = await Connection.InvokeAsync<RpcResult>(Command.Send, requestJson,
+            typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);
 
-        var (responseBytes, error) = await Connection.InvokeAsync<(byte[]?, string?)>(Command.Send, requestBytes,
-            typeof(TRequest).FullName, typeof(TResponse).FullName);
+        var error = result?.Error;
+        var responseJson = result?.Result;
+        TResponse? response;
 
-        if (error != null || responseBytes == null)
+        if (error != null || responseJson == null || (response = JsonUtil.FromJson<TResponse>(responseJson)) == null)
         {
-            Logger.LogError("Get error when sending request {id}: {error}", request.RequestId, error ?? UnknownError);
+            Logger.LogError("Get error when sending request {id}: {error}, {response}", request.RequestId,
+                error ?? UnknownError, responseJson);
             return new TResponse { RequestId = request.RequestId, Success = false, Error = error ?? UnknownError };
         }
 
-        var response = await MessagePackUtil.FromBinaryAsync<TResponse>(responseBytes);
-
-        Logger.LogInformation("Receive response for request {id}:{response}", request.RequestId, response);
-        response.RequestId = request.RequestId;
-        response.Success = string.IsNullOrEmpty(response.Error);
+        Logger.LogInformation("Receive response for request {id}:{response}", request.RequestId, responseJson);
         return response;
     }
 }

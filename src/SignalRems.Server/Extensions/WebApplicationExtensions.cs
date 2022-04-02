@@ -8,7 +8,7 @@ public static class WebApplicationExtensions
 {
     public static IServiceCollection AddSignalRemsService(this IServiceCollection service)
     {
-        service.AddSignalR().AddMessagePackProtocol();
+        service.AddSignalR();
         service.AddSingleton<IPublisherService, PublisherService>();
         service.AddSingleton<IRpcService, RpcService>();
         return service;

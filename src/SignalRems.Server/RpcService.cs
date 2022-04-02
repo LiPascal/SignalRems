@@ -1,6 +1,8 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using MessagePack;
 using SignalRems.Core.Interfaces;
+using SignalRems.Core.Models;
 using SignalRems.Core.Utils;
 using SignalRems.Server.Data;
 using SignalRems.Server.Exceptions;
@@ -9,7 +11,7 @@ namespace SignalRems.Server;
 
 internal sealed class RpcService : IRpcService
 {
-    private readonly ConcurrentDictionary<(string, string), Func<byte[], Task<byte[]>>> _handlers = new();
+    private readonly ConcurrentDictionary<(string, string), Func<string, Task<string>>> _handlers = new();
     private bool _running = true;
     private bool _started = false;
 
@@ -25,13 +27,16 @@ internal sealed class RpcService : IRpcService
         var responseType = typeof(TResponse).FullName;
         if (responseType == null || requestType == null)
         {
-            throw new NotSupportedException("Invalid requestBytes/response type");
+            throw new NotSupportedException("Invalid request/response type");
         }
-        async Task<byte[]> Process(byte[] requestBytes)
+        async Task<string> Process(string requestJson)
         {
-            var req = await MessagePackUtil.FromBinaryAsync<TRequest>(requestBytes);
+            var req = JsonUtil.FromJson<TRequest>(requestJson);
+            Debug.Assert(req != null, nameof(req) + " != null");
             var result = await handleFunc(req);
-            return await MessagePackUtil.ToBinaryAsync(result);
+            result.RequestId = req.RequestId;
+            result.Success = string.IsNullOrEmpty(result.Error);
+            return JsonUtil.ToJson(result);
         }
 
         _handlers[(requestType, responseType)] = Process;
@@ -60,7 +65,7 @@ internal sealed class RpcService : IRpcService
                     var key = (command.RequestType, command.ResponseType);
                     if (!_handlers.ContainsKey(key))
                     {
-                        command.Response.SetResult((null, $"{command.RequestType}/{command.ResponseType} is not supported"));
+                        command.Response.SetResult(new RpcResult(null, $"{command.RequestType}/{command.ResponseType} is not supported"));
                     }
                     else
                     {
@@ -70,11 +75,11 @@ internal sealed class RpcService : IRpcService
                             try
                             {
                                 var response = await handler(command.RpcRequest);
-                                command.Response.SetResult((response, null));
+                                command.Response.SetResult(new RpcResult(response, null));
                             }
                             catch (Exception e)
                             {
-                                command.Response.SetResult((null, e.Message));
+                                command.Response.SetResult(new RpcResult(null, e.Message));
                             }
                         });
                     }

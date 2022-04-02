@@ -8,7 +8,7 @@ IHost host = Host.CreateDefaultBuilder(args)
     {
         services.AddHostedService<Worker>();
         services.AddSignalRemsClient();
-        services.AddScoped<ISubscriptionHandler<Person>, PersonManager>();
+        services.AddTransient<ISubscriptionHandler<Person>, PersonManager>();
     })
     .Build();
 

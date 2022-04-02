@@ -1,13 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Pascal Li</Authors>
-    <Version>0.1.1</Version>
-    <FileVersion>0.1.1</FileVersion>
-    <AssemblyVersion>0.1.1</AssemblyVersion>
+    <Version>0.1.2-preview</Version>
+    <FileVersion>0.1.2</FileVersion>
+    <AssemblyVersion>0.1.2</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

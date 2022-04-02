@@ -7,10 +7,8 @@ public static class ServicesExtensions
 {
     public static IServiceCollection AddSignalRemsClient(this IServiceCollection service)
     {
-        service.AddScoped<ISubscriberClient, SubscriberClient>();
-        service.AddScoped<IRpcClient, RpcClient>();
+        service.AddTransient<ISubscriberClient, SubscriberClient>();
+        service.AddTransient<IRpcClient, RpcClient>();
         return service;
     }
-
-    
 }

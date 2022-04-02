@@ -1,10 +1,11 @@
 ﻿using SignalRems.Core.Interfaces;
+using SignalRems.Core.Models;
 
 namespace SignalRems.Server.Data;
 
 internal class RemoteCallerCommand
 {
-    public RemoteCallerCommand(byte[] rpcRequest, TaskCompletionSource<(byte[]?, string?)> response, string requestType, string responseType)
+    public RemoteCallerCommand(string rpcRequest, TaskCompletionSource<RpcResult> response, string requestType, string responseType)
     {
         RpcRequest = rpcRequest;
         Response = response;
@@ -12,8 +13,8 @@ internal class RemoteCallerCommand
         ResponseType = responseType;
     }
 
-    public byte[] RpcRequest { get; }
-    public TaskCompletionSource<(byte[]?, string?)> Response { get; }
+    public string RpcRequest { get; }
+    public TaskCompletionSource<RpcResult> Response { get; }
     public string RequestType { get; }
     public string ResponseType { get; }
 }

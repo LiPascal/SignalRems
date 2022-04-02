@@ -10,13 +10,12 @@ public class Worker : BackgroundService
     private readonly ISubscriberClient _subscriberClient;
     private readonly IRpcClient _rpcClient;
 
-    public Worker(IServiceScopeFactory factory, ILogger<Worker> logger)
+    public Worker(ILogger<Worker> logger, ISubscriptionHandler<Person> personHandler, ISubscriberClient subscriberClient, IRpcClient rpcClient)
     {
         _logger = logger;
-        var provider = factory.CreateScope().ServiceProvider;
-        _personHandler = provider.GetRequiredService<ISubscriptionHandler<Person>>();
-        _subscriberClient = provider.GetRequiredService<ISubscriberClient>();
-        _rpcClient = provider.GetRequiredService<IRpcClient>();
+        _personHandler = personHandler;
+        _subscriberClient = subscriberClient;
+        _rpcClient = rpcClient;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

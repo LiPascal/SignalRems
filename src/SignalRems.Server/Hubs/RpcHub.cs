@@ -1,6 +1,7 @@
 ﻿using MessagePack;
 using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Interfaces;
+using SignalRems.Core.Models;
 using SignalRems.Server.Data;
 
 namespace SignalRems.Server.Hubs;
@@ -24,9 +25,9 @@ public class RpcHub : Hub
     #endregion
 
     // ReSharper disable once UnusedMember.Global
-    public async Task<(byte[]?, string?)> Send(byte[] request, string requestType, string responseType)
+    public async Task<RpcResult> Send(string request, string requestType, string responseType)
     {
-        var tcs = new TaskCompletionSource<(byte[]?, string?)>();
+        var tcs = new TaskCompletionSource<RpcResult>();
         var command = new RemoteCallerCommand(request, tcs, requestType, responseType);
         var client = RemoteCallerClient.Clients[Context.ConnectionId];
         client.PendingCommands.Enqueue(command);
