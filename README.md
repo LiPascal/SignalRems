@@ -1,8 +1,8 @@
 # SignalR EMS
 ## Description
 SignalRems is one Enterprise Messaging System (EMS) implemented by .NET Standard SignalR. It provides two communication models, RPC and PUB/SUB. This library will provide strong typed API to help client application communicate with server. 
-It is using MessagePack binary format for serialization/deserialization . 
-In PUB/SUB mode, it subscribe with filter of Lambda expression. 
+It is using json format for serialization/deserialization. Will support binary format later once MessagePack supports dyanmic resolver in .NET standard ([Issue of MessagePack in .net standard](https://github.com/neuecc/MessagePack-CSharp/issues/1141)). 
+In PUB/SUB mode, it subscribes with filter of Lambda expression. 
 ## Dependency
 This libiary is built on [SingalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr), hence the server application must be using "Microsoft.NET.Sdk.Web" SDK. The client side could use any .net 6.0 SDK. 
 ## API usage
@@ -24,9 +24,9 @@ IRpcHandler<GetUserNameRequest, GetUserNameResponse> handler;
 rpcService.RegisterHandler<GetUserNameRequest, GetUserNameResponse>(handler);
 ```
 ### RPC Client
-1. Get RPC client from dependency injection; 
+1. Config RPC client into dependency injection; 
 ``` C#
-_rpcClient = ServiceProvider.GetRequiredService<IRpcClient>();
+services.AddSignalRemsClient();
 ```
 2. Make connection and call:
 ``` C#
@@ -55,9 +55,9 @@ var publisher =  _publisherService.CreatePublisher<Person, int>("Message");
 publisher.Publish(new Person() { Id = id, Age = random.Next(95), Name = $"Person_{id:000}" });
 ```
 ### PUB/SUB Client
-1. Get subscriber client from dependency injection; 
+1. Config subscriber client into dependency injection; 
 ``` C#
-_subscriberClient = ServiceProvider.GetRequiredService<ISubscriberClient>();
+services.AddSignalRemsClient();
 ```
 2. Make connection and call. It supports Lambda expression as filter. This Lambda expression must be able to be explained from both server and client. 
 ``` C#
