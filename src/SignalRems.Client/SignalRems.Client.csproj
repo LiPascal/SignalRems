@@ -11,6 +11,7 @@
     <BaseOutputPath>..\..\build</BaseOutputPath>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/LiPascal/SignalRems</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
