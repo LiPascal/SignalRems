@@ -1,7 +1,7 @@
-# SignalR EMS
+# [SignalR EMS](https://github.com/LiPascal/SignalRems)
 ## Description
 SignalRems is one Enterprise Messaging System (EMS) implemented by .NET Standard SignalR. It provides two communication models, RPC and PUB/SUB. This library will provide strong typed API to help client application communicate with server. 
-It is using json format for serialization/deserialization. Will support binary format later once MessagePack supports dyanmic resolver in .NET standard ([Issue of MessagePack in .net standard](https://github.com/neuecc/MessagePack-CSharp/issues/1141)). 
+It is using Newtonsoft.json or MessagePack for serialization/deserialization. 
 In PUB/SUB mode, it subscribes with filter of Lambda expression. 
 ## Dependency
 This libiary is built on [SingalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr), hence the server application must be using "Microsoft.NET.Sdk.Web" SDK. The client side could use any .net 6.0 SDK. 
@@ -10,7 +10,8 @@ This libiary is built on [SingalR](https://dotnet.microsoft.com/en-us/apps/aspne
 1. Configure WebApplication builder; 
 ``` C#
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSignalRemsService();
+builder.Services.AddSignalRemsService(); // Using Json serialization/deserialization
+// builder.Services.AddSignalRemsService(true); // MessagePack serialization/deserialization
 ```
 2. Setup endpoint for app instance:
 ``` C#
@@ -26,7 +27,8 @@ rpcService.RegisterHandler<GetUserNameRequest, GetUserNameResponse>(handler);
 ### RPC Client
 1. Config RPC client into dependency injection; 
 ``` C#
-services.AddSignalRemsClient();
+services.AddSignalRemsClient(); // Using Json serialization/deserialization
+// services.AddSignalRemsClient(true); // MessagePack serialization/deserialization
 ```
 2. Make connection and call:
 ``` C#
@@ -65,7 +67,7 @@ ISubscriptionHandler<Person> handler;
 await _subscriberClient.ConnectAsync("https://localhost:7198", "/signalr/ems/example/pubsub", stoppingToken);
 var subscription = await _subscriberClient.SubscribeAsync("Message", handler, p=> p.Age > 60);
 ```
-3. The handler 
+Please note, one client can only used to do one subscription. The dispose method will stop the subscrition and disconnect from server. We can get multiple client instance from DI container to subscribe with differnet topic/filter. 
 ## License
 This project is open source and follows MIT license. 
 
