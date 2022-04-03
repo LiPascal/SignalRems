@@ -5,13 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Pascal Li</Authors>
-    <Version>0.2.0-preview</Version>
-    <FileVersion>0.2.0</FileVersion>
-    <AssemblyVersion>0.2.0</AssemblyVersion>
+    <Version>0.2.1-preview</Version>
+    <FileVersion>0.2.1</FileVersion>
+    <AssemblyVersion>0.2.1</AssemblyVersion>
     <BaseOutputPath>..\..\build</BaseOutputPath>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/LiPascal/SignalRems</RepositoryUrl>
+    <PackageProjectUrl>https://www.nuget.org/packages/SignalRems.Client/</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
