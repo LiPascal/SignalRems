@@ -29,23 +29,21 @@ internal class RpcClient : ClientBase, IRpcClient
             return new TResponse { RequestId = request.RequestId, Success = false, Error = NotConnectedError };
         }
 
-        var requestJson = JsonUtil.ToJson(request);
-        Logger.LogInformation("Send Request to {url}: {req_id} {req}", Url, request.RequestId, requestJson);
-        var result = await Connection.InvokeAsync<RpcResult>(Command.Send, requestJson,
+        var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request);
+        Logger.LogInformation("Send Request to {url}: {req_id}", Url, request.RequestId);
+        var result = await Connection.InvokeAsync<RpcResultWrapper>(Command.Send, reqObj,
             typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);
 
-        var error = result?.Error;
-        var responseJson = result?.Result;
+        var error = result.Error;
         TResponse? response;
 
-        if (error != null || responseJson == null || (response = JsonUtil.FromJson<TResponse>(responseJson)) == null)
+        if (error != null || (response = await SerializeUtil.DeserializeAsync<TResponse, RpcResultWrapper>(result)) == null)
         {
-            Logger.LogError("Get error when sending request {id}: {error}, {response}", request.RequestId,
-                error ?? UnknownError, responseJson);
+            Logger.LogError("Get error when sending request {id}: {error}", request.RequestId, error ?? UnknownError);
             return new TResponse { RequestId = request.RequestId, Success = false, Error = error ?? UnknownError };
         }
 
-        Logger.LogInformation("Receive response for request {id}:{response}", request.RequestId, responseJson);
+        Logger.LogInformation("Receive response for request {id}", request.RequestId);
         return response;
     }
 }

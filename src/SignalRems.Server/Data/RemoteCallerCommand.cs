@@ -5,7 +5,7 @@ namespace SignalRems.Server.Data;
 
 internal class RemoteCallerCommand
 {
-    public RemoteCallerCommand(string rpcRequest, TaskCompletionSource<RpcResult> response, string requestType, string responseType)
+    public RemoteCallerCommand(RpcRequestWrapper rpcRequest, TaskCompletionSource<RpcResultWrapper> response, string requestType, string responseType)
     {
         RpcRequest = rpcRequest;
         Response = response;
@@ -13,8 +13,8 @@ internal class RemoteCallerCommand
         ResponseType = responseType;
     }
 
-    public string RpcRequest { get; }
-    public TaskCompletionSource<RpcResult> Response { get; }
+    public RpcRequestWrapper RpcRequest { get; }
+    public TaskCompletionSource<RpcResultWrapper> Response { get; }
     public string RequestType { get; }
     public string ResponseType { get; }
 }

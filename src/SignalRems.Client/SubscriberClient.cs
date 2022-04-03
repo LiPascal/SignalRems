@@ -1,15 +1,13 @@
 ﻿using System.Linq.Expressions;
-using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using SignalRems.Core.Events;
 using SignalRems.Core.Interfaces;
 
 namespace SignalRems.Client;
 
 internal sealed class SubscriberClient : ClientBase, ISubscriberClient
 {
-    private readonly List<ISubscription> _subscriptions = new();
+    private ISubscription? _subscription;
+    private int _subscriptionCount = 0;
 
     public SubscriberClient(ILogger<SubscriberClient> logger) : base(logger)
     {
@@ -26,20 +24,20 @@ internal sealed class SubscriberClient : ClientBase, ISubscriberClient
             throw new InvalidOperationException("Not connected to server");
         }
 
-        var subscription = new Subscription<T>(Connection, topic, handler, filter);
-        await subscription.StartAsync();
-        lock (subscription)
+        if (Interlocked.Exchange(ref _subscriptionCount, 1) != 0)
         {
-            if (Connection == null)
-            {
-                subscription.Dispose();
-                return subscription;
-            }
-
-            _subscriptions.Add(subscription);
+            throw new InvalidOperationException("One client instance can only subscribe once");
         }
 
-        return subscription;
+        _subscription = new Subscription<T>(Connection, topic, handler, filter);
+        if (Connection == null)
+        {
+            _subscription.Dispose();
+            return _subscription;
+        }
+        await _subscription.StartAsync();
+       
+        return _subscription;
     }
 
     #endregion
@@ -49,48 +47,20 @@ internal sealed class SubscriberClient : ClientBase, ISubscriberClient
     protected override void DoDispose()
     {
         base.DoDispose();
-        List<IDisposable> toDisposables = new();
-        lock (_subscriptions)
-        {
-            toDisposables.AddRange(_subscriptions);
-        }
-
-        foreach (var disposable in toDisposables)
-        {
-            disposable.Dispose();
-        }
+        _subscription?.Dispose();
     }
 
     protected override async Task ConnectionOnReconnected(string? newId)
     {
         await base.ConnectionOnReconnected(newId);
-        ISubscription[] subscriptions;
-        lock (_subscriptions)
-        {
-            subscriptions = _subscriptions.ToArray();
-        }
-
-        foreach (var subscription in subscriptions)
-        {
-            subscription.Reset();
-            await subscription.ReStartAsync();
-        }
+        _subscription?.Reset();
+        await (_subscription?.ReStartAsync() ?? Task.CompletedTask);
     }
 
     protected override async Task ConnectionOnClosed(Exception? exception)
     {
         await base.ConnectionOnClosed(exception);
-
-        ISubscription[] subscriptions;
-        lock (_subscriptions)
-        {
-            subscriptions = _subscriptions.ToArray();
-        }
-
-        foreach (var subscription in subscriptions)
-        {
-            subscription.Closed();
-        }
+        _subscription?.Closed();
     }
 
     #endregion

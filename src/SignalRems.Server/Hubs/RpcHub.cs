@@ -6,7 +6,7 @@ using SignalRems.Server.Data;
 
 namespace SignalRems.Server.Hubs;
 
-public class RpcHub : Hub
+internal class RpcHub : Hub
 {
     #region override
 
@@ -24,10 +24,10 @@ public class RpcHub : Hub
 
     #endregion
 
-    // ReSharper disable once UnusedMember.Global
-    public async Task<RpcResult> Send(string request, string requestType, string responseType)
+   // ReSharper disable once UnusedMember.Global
+    public async Task<RpcResultWrapper> Send(RpcRequestWrapper request, string requestType, string responseType)
     {
-        var tcs = new TaskCompletionSource<RpcResult>();
+        var tcs = new TaskCompletionSource<RpcResultWrapper>();
         var command = new RemoteCallerCommand(request, tcs, requestType, responseType);
         var client = RemoteCallerClient.Clients[Context.ConnectionId];
         client.PendingCommands.Enqueue(command);

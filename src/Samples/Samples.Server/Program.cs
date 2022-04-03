@@ -2,7 +2,7 @@ using Samples.Server;
 using SignalRems.Server.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSignalRemsService();
+builder.Services.AddSignalRemsService(true);
 builder.Services.AddSingleton<UserInfoQueryHandler>();
 builder.Services.AddHostedService<Worker>();
 var app = builder.Build();

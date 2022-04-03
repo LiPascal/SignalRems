@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MessagePack;
 using SignalRems.Core.Interfaces;
 
 namespace Samples.Model;
 
+[MessagePackObject(true)]
 public class GetUserNameResponse : IRpcResponse
 {
     public string? RequestId { get; set; }

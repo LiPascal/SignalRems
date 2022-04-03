@@ -11,7 +11,7 @@ namespace SignalRems.Server;
 
 internal sealed class RpcService : IRpcService
 {
-    private readonly ConcurrentDictionary<(string, string), Func<string, Task<string>>> _handlers = new();
+    private readonly ConcurrentDictionary<(string, string), Func<RpcRequestWrapper, Task<RpcResultWrapper>>> _handlers = new();
     private bool _running = true;
     private bool _started = false;
 
@@ -29,14 +29,14 @@ internal sealed class RpcService : IRpcService
         {
             throw new NotSupportedException("Invalid request/response type");
         }
-        async Task<string> Process(string requestJson)
+        async Task<RpcResultWrapper> Process(RpcRequestWrapper reqObj)
         {
-            var req = JsonUtil.FromJson<TRequest>(requestJson);
+            var req = await SerializeUtil.DeserializeAsync<TRequest, RpcRequestWrapper>(reqObj);
             Debug.Assert(req != null, nameof(req) + " != null");
             var result = await handleFunc(req);
             result.RequestId = req.RequestId;
             result.Success = string.IsNullOrEmpty(result.Error);
-            return JsonUtil.ToJson(result);
+            return await SerializeUtil.SerializeAsync<TResponse, RpcResultWrapper>(result);
         }
 
         _handlers[(requestType, responseType)] = Process;
@@ -65,7 +65,8 @@ internal sealed class RpcService : IRpcService
                     var key = (command.RequestType, command.ResponseType);
                     if (!_handlers.ContainsKey(key))
                     {
-                        command.Response.SetResult(new RpcResult(null, $"{command.RequestType}/{command.ResponseType} is not supported"));
+                        command.Response.SetResult(new RpcResultWrapper()
+                            { Error = $"{command.RequestType}/{command.ResponseType} is not supported" });
                     }
                     else
                     {
@@ -75,11 +76,11 @@ internal sealed class RpcService : IRpcService
                             try
                             {
                                 var response = await handler(command.RpcRequest);
-                                command.Response.SetResult(new RpcResult(response, null));
+                                command.Response.SetResult(response);
                             }
                             catch (Exception e)
                             {
-                                command.Response.SetResult(new RpcResult(null, e.Message));
+                                command.Response.SetResult(new RpcResultWrapper() { Error = e.Message });
                             }
                         });
                     }
