@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Attributes;
 using SignalRems.Core.Interfaces;
@@ -106,14 +107,14 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                     filter = FilterUtil.ToFilter<T>(subscriptionCommand.Parameters[0] as string);
                     break;
                 default:
-                    subscriptionCommand.CompleteSource.SetResult(new InvalidOperationException("Should not happen here, unknown action"));
+                    subscriptionCommand.CompleteSource.SetResult("Should not happen here, unknown action");
                     return;
             }
         }
         catch (Exception ex)
         {
             _subscriptions.Remove(subscriptionCommand.Context.SubscriptionId);
-            subscriptionCommand.CompleteSource.SetResult(ex);
+            subscriptionCommand.CompleteSource.SetResult(ex.GetFullMessage());
             return;
         }
 
@@ -129,7 +130,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
             catch (Exception ex)
             {
                 _logger.LogWarning("Get error when sending snapshot.", ex);
-                subscriptionCommand.CompleteSource.SetResult(new Exception("Get error when sending snapshot."));
+                subscriptionCommand.CompleteSource.SetResult($"Get error when sending snapshot.{ex.GetFullMessage()}");
             }
         }
         else

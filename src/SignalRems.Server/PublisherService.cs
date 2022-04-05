@@ -59,8 +59,7 @@ internal class PublisherService : IPublisherService
                         }
                         else
                         {
-                            command.CompleteSource.SetResult(
-                                new NotSupportedException("Server doesn't support this topic"));
+                            command.CompleteSource.SetResult("Server doesn't support this topic");
                         }
 
                         updated = true;

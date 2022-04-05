@@ -8,7 +8,7 @@ public interface ISubscriptionHandler<in T> where T : class, new()
 
     void OnSnapshotEnd();
 
-    void OnException(Exception e);
+    void OnError(string error);
 
     void OnReset();
 }

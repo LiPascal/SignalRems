@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
-using SignalRems.Client.Exceptions;
 using SignalRems.Core.Interfaces;
 using SignalRems.Core.Models;
 using SignalRems.Core.Utils;
@@ -42,7 +37,6 @@ internal class Subscription<T> : ISubscription where T : class, new()
         {
             return;
         }
-
         var snapshotDisposable = _connection.On<T[]>(Command.Snapshot, snapshot =>
         {
             _handler.OnSnapshotBegin();
@@ -65,12 +59,22 @@ internal class Subscription<T> : ISubscription where T : class, new()
             _listeners.Add(snapshotDisposable);
             _listeners.Add(publishDisposable);
         }
-        
-        var exception = await _connection.InvokeAsync<Exception?>(Command.GetSnapshotAndSubscribe, _subscriptionId, _topic, FilterUtil.ToFilterString(_filter));
-        if (exception != null)
+
+        try
         {
-            _handler.OnException(exception);
+            var error = await _connection.InvokeAsync<string?>(Command.GetSnapshotAndSubscribe, _subscriptionId,
+                _topic, FilterUtil.ToFilterString(_filter));
+            if (!string.IsNullOrEmpty(error))
+            {
+                _handler.OnError(error);
+            }
         }
+        catch (Exception ex)
+        {
+            _handler.OnError(ex.GetFullMessage());
+        }
+
+       
     }
 
     public void Reset()
@@ -88,7 +92,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
             return;
         }
 
-        _handler.OnException(new ServerCloseException());
+        _handler.OnError("Server is Closed");
         _isSubscribing = false;
     }
 
@@ -105,10 +109,13 @@ internal class Subscription<T> : ISubscription where T : class, new()
             _listeners.Clear();
         }
 
-        var exception = await _connection.InvokeAsync<Exception?>(Command.UnSubscribe, _subscriptionId);
-        if (exception != null)
+        if (_connection.ConnectionId != null)
         {
-            _handler.OnException(exception);
+            var error = await _connection.InvokeAsync<string?>(Command.UnSubscribe, _subscriptionId);
+            if (error != null)
+            {
+                _handler.OnError(error);
+            }
         }
     }
 

@@ -27,9 +27,9 @@ internal class PersonManager : ISubscriptionHandler<Person>
         _logger.LogInformation("Snapshot End.");
     }
 
-    public void OnException(Exception e)
+    public void OnError(string error)
     {
-        _logger.LogInformation("Exception {message}", e.Message);
+        _logger.LogInformation("OnError {message}", error);
     }
 
     public void OnReset()
