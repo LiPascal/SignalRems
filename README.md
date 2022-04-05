@@ -67,7 +67,7 @@ ISubscriptionHandler<Person> handler;
 await _subscriberClient.ConnectAsync("https://localhost:7198", "/signalr/ems/example/pubsub", stoppingToken);
 var subscription = await _subscriberClient.SubscribeAsync("Message", handler, p=> p.Age > 60);
 ```
-Please note, one client can only used to do one subscription. The dispose method will stop the subscrition and disconnect from server. We can get multiple client instance from DI container to subscribe with differnet topic/filter. 
+Please note, one client can only be used to do one subscription. The dispose method will stop the subscription and disconnect from server. We can get multiple client instances from DI container to subscribe with differnet topic/filter. 
 ## License
 This project is open source and follows MIT license. 
 
