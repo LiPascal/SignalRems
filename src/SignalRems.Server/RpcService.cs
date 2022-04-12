@@ -80,7 +80,7 @@ internal sealed class RpcService : IRpcService
                             }
                             catch (Exception e)
                             {
-                                command.Response.SetResult(new RpcResultWrapper() { Error = e.Message });
+                                command.Response.SetResult(new RpcResultWrapper() { Error = e.GetFullMessage() });
                             }
                         });
                     }

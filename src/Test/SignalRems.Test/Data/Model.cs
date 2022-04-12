@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using MessagePack;
-using NUnit.Framework;
 
-namespace SignalRems.Test
+namespace SignalRems.Test.Data
 {
     [MessagePackObject(true)]
     public class Model

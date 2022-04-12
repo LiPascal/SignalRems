@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using SignalRems.Core.Interfaces;
+using SignalRems.Test.Data;
+using SignalRems.Test.Utils;
 
-namespace SignalRems.Test;
+namespace SignalRems.Test.Test;
 
+[TestFixture]
 public class Tests
 {
     private static readonly ConcurrentStack<Action> DisposeActions = new();

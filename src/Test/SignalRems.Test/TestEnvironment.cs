@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +48,10 @@ public class TestEnvironment
             {
                 var publisherService = serverApp.Services.GetService<IPublisherService>();
                 publisherService.Start();
+                var rpcService = serverApp.Services.GetService<IRpcService>();
+                rpcService.Start();
                 DisposeActions.Push(() => publisherService.Dispose());
+                DisposeActions.Push(() => rpcService.Dispose());
                 if (Interlocked.Increment(ref ReadyCnt) == ExpectedReadyCnt)
                 {
                     EnvReady.SetResult();

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SignalRems.Test
+namespace SignalRems.Test.Utils
 {
     public class TestUtil
     {

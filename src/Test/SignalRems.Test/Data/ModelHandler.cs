@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using SignalRems.Core.Interfaces;
 
-namespace SignalRems.Test
+namespace SignalRems.Test.Data
 {
     public class ModelHandler: ISubscriptionHandler<Model>
     {
