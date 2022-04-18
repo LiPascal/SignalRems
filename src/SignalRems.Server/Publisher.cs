@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Attributes;
@@ -13,8 +14,9 @@ namespace SignalRems.Server;
 
 internal interface IPublisherWorker
 {
-    Task DispatchCommandAsync(SubscriptionCommand subscriptionCommand);
-    ValueTask<bool> WorkAsync();
+    void DispatchCommand(SubscriptionCommand subscriptionCommand);
+    bool IsIdle { get; }
+    void Work();
 }
 
 internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : class, new() where TKey : notnull
@@ -26,6 +28,8 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     private readonly Dictionary<TKey, T> _cache = new();
     private readonly Func<T, TKey> _keyGetter;
     private readonly IHubContext<PubSubHub> _hubContext;
+    private readonly ConcurrentQueue<SubscriptionCommand> _pendingCommands = new();
+    private bool _isDirty = false;
 
     public Publisher(ILogger<Publisher<T, TKey>> logger, IHubContext<PubSubHub> hubContext, string topic)
     {
@@ -57,6 +61,8 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         {
             _buffer.Add(entity);
         }
+
+        _isDirty = true;
     }
 
     public void Publish(IEnumerable<T> entities)
@@ -65,6 +71,8 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         {
             _buffer.AddRange(entities);
         }
+
+        _isDirty = true;
     }
 
     public string Topic { get; }
@@ -74,7 +82,46 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
     #region interface IPublisherWorker
 
-    public async Task DispatchCommandAsync(SubscriptionCommand subscriptionCommand)
+    public void DispatchCommand(SubscriptionCommand subscriptionCommand)
+    {
+        _pendingCommands.Enqueue(subscriptionCommand);
+        _isDirty = true;
+    }
+
+    public bool IsIdle { get; private set; } = true;
+
+    public void Work()
+    {
+        if (!_isDirty)
+        {
+            return;
+        }
+
+        IsIdle = false;
+        _isDirty = false;
+        Task.Run(async () =>
+        {
+            bool updated;
+            do
+            {
+                updated = false;
+                while (_pendingCommands.TryDequeue(out var command))
+                {
+                    await DispatchCommandAsync(command);
+                    updated = true;
+                }
+
+                updated = await DoPublishAsync() || updated;
+
+            } while (updated);
+            IsIdle = true;
+        });
+    }
+    #endregion
+
+    #region private methods
+
+    private async Task DispatchCommandAsync(SubscriptionCommand subscriptionCommand)
     {
         if (!_subscriptions.ContainsKey(subscriptionCommand.Context.SubscriptionId))
         {
@@ -139,7 +186,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         }
     }
 
-    public async ValueTask<bool> WorkAsync()
+    public async ValueTask<bool> DoPublishAsync()
     {
         var updated = false;
 
@@ -188,9 +235,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     }
 
     #endregion
-    
 
-   
 
     private static TKey GetKey(MethodBase getter, T entity)
     {

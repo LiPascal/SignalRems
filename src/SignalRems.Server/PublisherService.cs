@@ -9,8 +9,8 @@ namespace SignalRems.Server;
 
 internal class PublisherService : IPublisherService
 {
-    private bool _running = true;
-    private bool _started = false;
+    private bool _running;
+    private Task? _serviceTask;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<PublisherService> _logger;
     private readonly ConcurrentDictionary<string, IPublisherWorker> _publishers = new();
@@ -35,13 +35,13 @@ internal class PublisherService : IPublisherService
 
     public void Start()
     {
-        if (_started)
+        if (_serviceTask != null)
         {
             return;
         }
 
-        _started = true;
-        Task.Run(async () =>
+        _running = true;
+        _serviceTask = Task.Run(async () =>
         {
             while (_running)
             {
@@ -52,7 +52,7 @@ internal class PublisherService : IPublisherService
                     {
                         if (_publishers.ContainsKey(command.Context.Topic))
                         {
-                            await _publishers[command.Context.Topic].DispatchCommandAsync(command).ConfigureAwait(true);
+                            _publishers[command.Context.Topic].DispatchCommand(command);
                             _logger.LogInformation(
                                 "Dispatch command {command.CommandName} to topic {subscription.Topic}",
                                 command.CommandName, command.Context.Topic);
@@ -66,13 +66,10 @@ internal class PublisherService : IPublisherService
                     }
                 }
 
-                await Parallel.ForEachAsync(_publishers.Values, async (publisher, c) =>
+                foreach (var publisher in _publishers.Values.Where(p => p.IsIdle))
                 {
-                    if (await publisher.WorkAsync())
-                    {
-                        updated = true;
-                    }
-                }).ConfigureAwait(true);
+                    publisher.Work();
+                }
 
                 if (!updated)
                 {
@@ -82,8 +79,15 @@ internal class PublisherService : IPublisherService
         });
     }
 
-    public void Dispose()
+    public async void Dispose()
     {
         _running = false;
+        if (_serviceTask == null)
+        {
+            return;
+        }
+
+        await _serviceTask;
+        _serviceTask = null;
     }
 }
