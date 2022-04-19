@@ -13,6 +13,7 @@ namespace SignalRems.Client;
 
 public abstract class ClientBase : IClient
 {
+    private bool _disposed = false;
     protected ClientBase(ILogger logger)
     {
         Logger = logger;
@@ -66,6 +67,12 @@ public abstract class ClientBase : IClient
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         DoDispose();
         GC.SuppressFinalize(this);
     }

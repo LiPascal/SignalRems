@@ -13,7 +13,7 @@ using SignalRems.Test.Utils;
 namespace SignalRems.Test.Test;
 
 [TestFixture]
-public class Tests
+public class PubsubTests
 {
     private static readonly ConcurrentStack<Action> DisposeActions = new();
 
@@ -28,7 +28,7 @@ public class Tests
     {
         while (DisposeActions.TryPop(out var action))
         {
-            action();
+           // action();
         }
     }
 

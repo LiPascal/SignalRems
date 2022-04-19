@@ -7,5 +7,7 @@ namespace SignalRems.Test.Data
     public class TestRequest:IRpcRequest
     {
         public string RequestId { get; set; }
+
+        public int ProcessTime { get; set; }
     }
 }
