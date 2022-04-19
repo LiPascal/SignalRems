@@ -1,14 +1,14 @@
+using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
+using SignalRems.Core.Interfaces;
+using SignalRems.Test.Data;
+using SignalRems.Test.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
-using SignalRems.Core.Interfaces;
-using SignalRems.Test.Data;
-using SignalRems.Test.Utils;
 
 namespace SignalRems.Test.Test;
 
@@ -92,5 +92,37 @@ public class PubsubTests
 
         Assert.AreEqual(2, handler1.Models.Count);
         Assert.AreEqual(1, handler2.Models.Count);
+    }
+
+
+    [Test]
+    public async Task PubsubSnapshotTest()
+    {
+        var topic = "PubsubSnapshotTest";
+        var publisherService = TestEnvironment.ServerServiceProvider.GetService<IPublisherService>();
+        var publisher = publisherService.CreatePublisher<Model, int>(topic);
+        DisposeActions.Push(() => publisher.Dispose());
+        for (int i = 0; i < 5; ++i)
+        {
+            var model = new Model { Id = i, Name = $"Model_{i}", CreateTime = DateTime.Now };
+            publisher.Publish(model);
+        }
+
+        var handler1 = new ModelHandler();
+        var client1 = TestEnvironment.ClientServiceProvider.GetService<ISubscriberClient>();
+        await client1.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.PubsubEndPoint, CancellationToken.None);
+        await client1.SubscribeAsync(topic, handler1);
+        DisposeActions.Push(() => client1.Dispose());
+        await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 5, 2000);
+        Assert.AreEqual(5, handler1.Models.Count);
+
+        var handler2 = new ModelHandler();
+        var client2 = TestEnvironment.ClientServiceProvider.GetService<ISubscriberClient>();
+        await client2.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.PubsubEndPoint, CancellationToken.None);
+        await client2.SubscribeAsync(topic, handler2);
+        DisposeActions.Push(() => client2.Dispose());
+        await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 5, 2000);
+        Assert.AreEqual(5, handler1.Models.Count);
+        Assert.AreEqual(5, handler2.SnapShotCount);
     }
 }

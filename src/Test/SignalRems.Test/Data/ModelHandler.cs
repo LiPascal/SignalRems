@@ -21,6 +21,7 @@ namespace SignalRems.Test.Data
 
         public void OnSnapshotEnd()
         {
+            SnapShotCount = _models.Count;
             Debug.WriteLine($"OnSnapshotEnd");
         }
 
@@ -36,5 +37,7 @@ namespace SignalRems.Test.Data
         }
 
         public IReadOnlyCollection<Model> Models => _models;
+
+        public int SnapShotCount { get; private set; }
     }
 }

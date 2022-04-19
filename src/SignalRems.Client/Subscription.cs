@@ -16,6 +16,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
     private readonly string _subscriptionId = Guid.NewGuid().ToString();
     private readonly List<IDisposable> _listeners = new();
     private bool _isSubscribing;
+    private bool _disposed;
 
     public Subscription(HubConnection connection, string topic, ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
     {
@@ -96,7 +97,18 @@ internal class Subscription<T> : ISubscription where T : class, new()
         _isSubscribing = false;
     }
 
-    public async void Dispose()
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        DoDispose();
+    }
+    private async void DoDispose()
     {
         _isSubscribing = false;
         lock (_listeners)
