@@ -28,7 +28,7 @@ public class PubsubTests
     {
         while (DisposeActions.TryPop(out var action))
         {
-           // action();
+            action();
         }
     }
 

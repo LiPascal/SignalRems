@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SignalRems.Core.Interfaces;
 
@@ -8,9 +9,11 @@ internal sealed class SubscriberClient : ClientBase, ISubscriberClient
 {
     private ISubscription? _subscription;
     private int _subscriptionCount = 0;
+    private readonly IServiceProvider _serviceCollection;
 
-    public SubscriberClient(ILogger<SubscriberClient> logger) : base(logger)
+    public SubscriberClient(ILogger<SubscriberClient> logger, IServiceProvider serviceCollection) : base(logger)
     {
+        _serviceCollection = serviceCollection;
     }
 
 
@@ -29,7 +32,8 @@ internal sealed class SubscriberClient : ClientBase, ISubscriberClient
             throw new InvalidOperationException("One client instance can only subscribe once");
         }
 
-        _subscription = new Subscription<T>(Connection, topic, handler, filter);
+        Logger.LogInformation("Subscribe topic = {topic}, type={type}", topic, typeof(T));
+        _subscription = new Subscription<T>(_serviceCollection.GetService<ILogger<Subscription<T>>>(), Connection, topic, handler, filter);
         if (Connection == null)
         {
             _subscription.Dispose();
@@ -46,8 +50,8 @@ internal sealed class SubscriberClient : ClientBase, ISubscriberClient
 
     protected override void DoDispose()
     {
-        base.DoDispose();
         _subscription?.Dispose();
+        base.DoDispose();       
     }
 
     protected override async Task ConnectionOnReconnected(string? newId)

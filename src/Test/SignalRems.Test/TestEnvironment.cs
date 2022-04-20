@@ -16,9 +16,9 @@ namespace SignalRems.Test;
 [SetUpFixture]
 public class TestEnvironment
 {
-    public static string ServerUrl = "https://localhost:19906";
-    public static string PubsubEndPoint = "/pubsub";
-    public static string RpcEndPoint = "/rpc";
+    public const string ServerUrl = "https://localhost:19906";
+    public const string PubsubEndPoint = "/pubsub";
+    public const string RpcEndPoint = "/rpc";
     public static IServiceProvider ServerServiceProvider;
     public static IServiceProvider ClientServiceProvider;
 

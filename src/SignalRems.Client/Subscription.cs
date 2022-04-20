@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Linq.Expressions;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 using SignalRems.Core.Interfaces;
 using SignalRems.Core.Models;
 using SignalRems.Core.Utils;
@@ -15,11 +16,14 @@ internal class Subscription<T> : ISubscription where T : class, new()
     private readonly Expression<Func<T, bool>>? _filter;
     private readonly string _subscriptionId = Guid.NewGuid().ToString();
     private readonly List<IDisposable> _listeners = new();
+    private readonly ILogger? _logger;
     private bool _isSubscribing;
     private bool _disposed;
 
-    public Subscription(HubConnection connection, string topic, ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
+    public Subscription(ILogger<Subscription<T>>? logger, HubConnection connection, string topic, ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
     {
+
+        _logger = logger;
         _connection = connection;
         _topic = topic;
         _handler = handler;
@@ -121,13 +125,22 @@ internal class Subscription<T> : ISubscription where T : class, new()
             _listeners.Clear();
         }
 
-        if (_connection.ConnectionId != null)
+        try
         {
-            var error = await _connection.InvokeAsync<string?>(Command.UnSubscribe, _subscriptionId);
-            if (error != null)
+            if (_connection.ConnectionId != null)
             {
-                _handler.OnError(error);
+                var error = await _connection.InvokeAsync<string?>(Command.UnSubscribe, _subscriptionId);
+                if (error != null)
+                {
+                    _handler.OnError(error);
+                }
             }
+        }
+        catch(Exception e)
+        {
+            var message = e.Message;
+            _logger?.LogError(message);
+            _handler.OnError(e.GetFullMessage());
         }
     }
 
