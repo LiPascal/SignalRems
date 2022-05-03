@@ -1,21 +1,16 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using MessagePack;
 using SignalRems.Core.Interfaces;
 using SignalRems.Core.Models;
 using SignalRems.Core.Utils;
-using SignalRems.Server.Data;
-using SignalRems.Server.Exceptions;
+using SignalRems.Server.Interfaces;
 
 namespace SignalRems.Server;
 
-internal sealed class RpcService : IRpcService
+internal sealed class RpcService : IRpcService, IRpcServer
 {
     private readonly ConcurrentDictionary<(string, string), Func<RpcRequestWrapper, Task<RpcResultWrapper>>> _handlers =
         new();
-
-    private bool _running;
-    private Task? _serviceTask;
 
     public void RegisterHandler<TRequest, TResponse>(IRpcHandler<TRequest, TResponse> handler)
         where TResponse : IRpcResponse where TRequest : IRpcRequest
@@ -46,37 +41,25 @@ internal sealed class RpcService : IRpcService
         _handlers[(requestType, responseType)] = Process;
     }
 
-    public void Start()
+   
+
+    public async Task<RpcResultWrapper> ProcessAsync(RpcRequestWrapper request, string requestType, string responseType)
     {
-        if (_serviceTask != null)
+        var key = (requestType, responseType);
+        if (!_handlers.ContainsKey(key))
         {
-            return;
+            return new RpcResultWrapper() { Error = $"{requestType}/{responseType} is not supported" };
         }
 
-        _running = true;
-        _serviceTask = Task.Run(async () =>
+        var handler = _handlers[key];
+        try
         {
-            while (_running)
-            {
-                foreach (var client in RemoteCallerClient.Clients.Values.Where(x => x.IsIdle && x.IsConnected))
-                {
-                    client.ProcessPending(_handlers);
-                }
-
-                await Task.Delay(10);
-            }
-        });
-    }
-
-    public async void Dispose()
-    {
-        _running = false;
-        if (_serviceTask == null)
-        {
-            return;
+            var response = await handler(request);
+            return response;
         }
-
-        await _serviceTask;
-        _serviceTask = null;
+        catch (Exception e)
+        {
+            return new RpcResultWrapper() { Error = e.GetFullMessage() };
+        }
     }
 }

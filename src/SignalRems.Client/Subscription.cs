@@ -138,8 +138,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
         }
         catch(Exception e)
         {
-            var message = e.Message;
-            _logger?.LogError(message);
+            _logger?.LogError("{msg}", e.Message);
             _handler.OnError(e.GetFullMessage());
         }
     }

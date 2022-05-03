@@ -2,6 +2,7 @@
 using SignalRems.Core.Utils;
 using SignalRems.Server.Data;
 using SignalRems.Server.Hubs;
+using SignalRems.Server.Interfaces;
 
 namespace SignalRems.Server.Extensions;
 
@@ -18,8 +19,11 @@ public static class WebApplicationExtensions
         {
             service.AddSignalR();
         }
+
         service.AddSingleton<IPublisherService, PublisherService>();
-        service.AddSingleton<IRpcService, RpcService>();
+        service.AddSingleton<RpcService>();
+        service.AddSingleton<IRpcService, RpcService>(provider => provider.GetService<RpcService>()!);
+        service.AddSingleton<IRpcServer, RpcService>(provider => provider.GetService<RpcService>()!);
         return service;
     }
 

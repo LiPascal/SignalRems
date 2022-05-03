@@ -21,7 +21,6 @@ namespace Samples.Server
             _publisherService.Start();
             _rpcService.RegisterHandler<GetUserAgeRequest, GetUserAgeResponse>(_handler);
             _rpcService.RegisterHandler<GetUserNameRequest, GetUserNameResponse>(_handler);
-            _rpcService.Start();
             var publisher =  _publisherService.CreatePublisher<Person, int>("Message");
             int id = 0;
             var random = new Random();

@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 namespace SignalRems.Core.Interfaces
 {
-    public interface IRpcService : IDisposable
+    public interface IRpcService 
     {
         void RegisterHandler<TRequest, TResponse>(IRpcHandler<TRequest, TResponse> handler) where TRequest : IRpcRequest where TResponse : IRpcResponse;
 
         void RegisterHandler<TRequest, TResponse>(Func<TRequest, Task<TResponse>> handleFunc) where TRequest : IRpcRequest where TResponse : IRpcResponse;
-
-        void Start();
     }
 }
