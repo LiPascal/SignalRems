@@ -41,7 +41,8 @@ public class PubsubTests
             Id = 5, 
             Name = "ABC",
             CreateTime = DateTime.Now, 
-            Marks = new List<double> { 3.14, 2.17, 0.03 }
+            Marks = new List<double> { 3.14, 2.17, 0.03 }, 
+            Status = Status.Done
         };
         var topic = "BasicPubsubTestTopic";
         var publisherService = TestEnvironment.ServerServiceProvider.GetService<IPublisherService>();
@@ -61,6 +62,7 @@ public class PubsubTests
         Assert.AreEqual(model.Name, model2.Name);
         Assert.AreEqual(model.CreateTime, model2.CreateTime);
         Assert.IsTrue(model.Marks.SequenceEqual(model2.Marks));
+        Assert.AreEqual(model.Status, Status.Done);
     }
 
     [Test]

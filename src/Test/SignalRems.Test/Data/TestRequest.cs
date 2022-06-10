@@ -9,5 +9,7 @@ namespace SignalRems.Test.Data
         public string RequestId { get; set; }
 
         public int ProcessTime { get; set; }
+
+        public Status Status { get; set; }
     }
 }

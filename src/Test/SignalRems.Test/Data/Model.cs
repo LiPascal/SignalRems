@@ -12,6 +12,6 @@ namespace SignalRems.Test.Data
         public string Name { get; set; }
         public DateTime CreateTime { get; set; }
         public List<double> Marks { get; set; }
-
+        public Status Status { get; set; }
     }
 }

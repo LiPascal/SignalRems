@@ -9,5 +9,6 @@ namespace SignalRems.Test.Data
         public string RequestId { get; set; }
         public bool Success { get; set; }
         public string Error { get; set; }
+        public Status Status { get; set; }
     }
 }

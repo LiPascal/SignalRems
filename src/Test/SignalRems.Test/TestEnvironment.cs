@@ -8,7 +8,9 @@ using Microsoft.Extensions.Hosting;
 using NUnit.Framework;
 using SignalRems.Client.Extensions;
 using SignalRems.Core.Interfaces;
+using SignalRems.Core.Utils;
 using SignalRems.Server.Extensions;
+using SignalRems.Test.Data;
 using Interlocked = System.Threading.Interlocked;
 
 namespace SignalRems.Test;
@@ -39,7 +41,7 @@ public class TestEnvironment
         Task.Run(async () =>
         {
             var serverBuilder = WebApplication.CreateBuilder();
-            serverBuilder.Services.AddSignalRemsService(UseMessagePack);
+            serverBuilder.Services.AddSignalRemsService(UseMessagePack, Status.Convertor);
             var serverApp = serverBuilder.Build();
             ServerServiceProvider = serverApp.Services;
             serverApp.MapSignalRemsPublisherHub(PubsubEndPoint);
@@ -66,7 +68,7 @@ public class TestEnvironment
         {
             var clientBuilder = Host.CreateDefaultBuilder().ConfigureServices(services =>
             {
-                services.AddSignalRemsClient(UseMessagePack);
+                services.AddSignalRemsClient(UseMessagePack, Status.Convertor);
             });
             var clientApp = clientBuilder.Build();
 

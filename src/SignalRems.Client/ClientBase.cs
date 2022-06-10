@@ -3,17 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MessagePack.Resolvers;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic.CompilerServices;
 using SignalRems.Core.Events;
 using SignalRems.Core.Interfaces;
+using SignalRems.Core.Utils;
 
 namespace SignalRems.Client;
 
 public abstract class ClientBase : IClient
 {
     private bool _disposed = false;
+
     protected ClientBase(ILogger logger)
     {
         Logger = logger;
@@ -30,10 +34,17 @@ public abstract class ClientBase : IClient
         }
 
         Url = url + endpoint;
-        Connection = new HubConnectionBuilder()
+        var builder = new HubConnectionBuilder()
             .WithUrl(Url)
-            .WithAutomaticReconnect(new RetryPolicy(Logger, Url))
-            .Build();
+            .WithAutomaticReconnect(new RetryPolicy(Logger, Url));
+        builder = builder.AddJsonProtocol(config =>
+        {
+            foreach (var converter in SerializeUtil.Converters)
+            {
+                config.PayloadSerializerOptions.Converters.Add(converter);
+            }
+        });
+        Connection = builder.Build();
         Connection.Reconnecting += ConnectionOnReconnecting;
         Connection.Reconnected += ConnectionOnReconnected;
         Connection.Closed += ConnectionOnClosed;

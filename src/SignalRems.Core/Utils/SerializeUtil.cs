@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MessagePack.Formatters;
 using SignalRems.Core.Interfaces;
 
 
@@ -10,16 +12,37 @@ namespace SignalRems.Core.Utils;
 
 internal static class SerializeUtil
 {
+    private static JsonConverter[] _converters = Array.Empty<JsonConverter>();
     internal static bool UseMessagePack { get; set; } = false;
+    private static JsonSerializerOptions JsonSerializerOptions { get; set; } = new JsonSerializerOptions();
+    internal static JsonConverter[] Converters
+    {
+        get => _converters;
+        set
+        {
+            if (_converters == value)
+            {
+                return;
+            }
+            _converters = value;
+            var options = new JsonSerializerOptions();
+            foreach (var converter in value)
+            {
+                options.Converters.Add(converter);
+            }
+
+            JsonSerializerOptions = options;
+        }
+    }
 
     private static string ToJson<T>(T entity)
     {
-        return JsonConvert.SerializeObject(entity);
+        return JsonSerializer.Serialize(entity, JsonSerializerOptions);
     }
 
     private static T? FromJson<T>(string json)
     {
-        return JsonConvert.DeserializeObject<T>(json);
+        return JsonSerializer.Deserialize<T>(json, JsonSerializerOptions);
     }
 
     private static async ValueTask<byte[]> ToBinaryAsync<T>(T entity)
