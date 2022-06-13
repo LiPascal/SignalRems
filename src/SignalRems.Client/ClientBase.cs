@@ -55,6 +55,7 @@ public abstract class ClientBase : IClient
             {
                 await Connection.StartAsync(token);
                 ChangeConnectionStatus(ConnectionStatus.Connected);
+                Logger.LogInformation("Connected to {0}, {1}", url, endpoint);
                 return;
             }
             catch when (token.IsCancellationRequested)

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MessagePack.Formatters;
+using Microsoft.Extensions.Logging;
 using SignalRems.Core.Interfaces;
 
 
@@ -78,6 +79,19 @@ internal static class SerializeUtil
         return UseMessagePack ? 
             wrapper.BinaryPayload == null ? default : await FromBinaryAsync<T>(wrapper.BinaryPayload) :
             wrapper.JsonPayload == null ? default : FromJson<T>(wrapper.JsonPayload);
+    }
+
+    internal static void Log<TWrapper>(this ILogger logger, string prefix, TWrapper wrapper, LogLevel level) where TWrapper : IRpcMessageWrapper
+    {
+        if (level == LogLevel.None)
+        {
+            return;
+        }
+        if (!UseMessagePack)
+        {
+            logger.Log(level, "{0}: {1}", prefix, wrapper.JsonPayload);
+        }
+
     }
 
 }

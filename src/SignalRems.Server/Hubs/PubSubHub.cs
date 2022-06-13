@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Models;
 using SignalRems.Server.Data;
@@ -7,6 +8,11 @@ namespace SignalRems.Server.Hubs;
 
 internal class PubSubHub : Hub
 {
+    private readonly ILogger<PubSubHub> _logger;
+    public PubSubHub(ILogger<PubSubHub> logger)
+    {
+        _logger = logger;
+    }
 
     #region override
 
@@ -14,12 +20,15 @@ internal class PubSubHub : Hub
     {
         SubscriptionClient.Clients[Context.ConnectionId] = new SubscriptionClient(Context.ConnectionId);
         await base.OnConnectedAsync();
+        var feature = Context.Features.Get<IHttpConnectionFeature>();
+        _logger.LogInformation("Established new connection with {0}, ip = {1}, port = {2}", Context.ConnectionId, feature?.RemoteIpAddress, feature?.RemotePort);
     }
 
     public override async Task OnDisconnectedAsync(Exception? e)
     {
         SubscriptionClient.Clients[Context.ConnectionId].IsConnected = false;
         await base.OnDisconnectedAsync(e);
+        _logger.LogInformation("Connection {0} lost", Context.ConnectionId);
     }
 
     #endregion

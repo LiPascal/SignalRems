@@ -21,7 +21,7 @@ internal class RpcClient : ClientBase, IRpcClient
     {
     }
 
-    public async Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request)
+    public async Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request, LogLevel level = LogLevel.None)
         where TRequest : class, IRpcRequest, new() where TResponse : class, IRpcResponse, new()
     {
         if (Connection == null)
@@ -30,10 +30,11 @@ internal class RpcClient : ClientBase, IRpcClient
         }
 
         var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request);
-        Logger.LogInformation("Send Request to {url}: {req_id}", Url, request.RequestId);
+        Logger.Log("Sending request:", reqObj, level);
         var result = await Connection.InvokeAsync<RpcResultWrapper>(Command.Send, reqObj,
             typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);
 
+        Logger.Log("Receive response:", result, level);
         var error = result.Error;
         TResponse? response;
 
@@ -42,8 +43,6 @@ internal class RpcClient : ClientBase, IRpcClient
             Logger.LogError("Get error when sending request {id}: {error}", request.RequestId, error ?? UnknownError);
             return new TResponse { RequestId = request.RequestId, Success = false, Error = error ?? UnknownError };
         }
-
-        Logger.LogInformation("Receive response for request {id}", request.RequestId);
         return response;
     }
 }

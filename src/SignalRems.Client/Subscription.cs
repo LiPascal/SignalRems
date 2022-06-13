@@ -16,11 +16,11 @@ internal class Subscription<T> : ISubscription where T : class, new()
     private readonly Expression<Func<T, bool>>? _filter;
     private readonly string _subscriptionId = Guid.NewGuid().ToString();
     private readonly List<IDisposable> _listeners = new();
-    private readonly ILogger? _logger;
+    private readonly ILogger _logger;
     private bool _isSubscribing;
     private bool _disposed;
 
-    public Subscription(ILogger<Subscription<T>>? logger, HubConnection connection, string topic, ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
+    public Subscription(ILogger<Subscription<T>> logger, HubConnection connection, string topic, ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
     {
 
         _logger = logger;
@@ -49,7 +49,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
             {
                 _handler.OnMessageReceived(item);
             }
-
+            _logger.LogInformation("Get {0} items in snap short", snapshot.Length);
             _handler.OnSnapshotEnd();
         });
         var publishDisposable = _connection.On<T>(Command.Publish, item => { _handler.OnMessageReceived(item); });
@@ -67,6 +67,8 @@ internal class Subscription<T> : ISubscription where T : class, new()
 
         try
         {
+            var filter = FilterUtil.ToFilterString(_filter);
+            _logger.LogInformation("Subscribing to topic {0}, filter = {1}", _topic, filter);
             var error = await _connection.InvokeAsync<string?>(Command.GetSnapshotAndSubscribe, _subscriptionId,
                 _topic, FilterUtil.ToFilterString(_filter));
             if (!string.IsNullOrEmpty(error))

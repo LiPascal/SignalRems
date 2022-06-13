@@ -173,6 +173,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 var client = _hubContext.Clients.Client(context.ClientId);
                 await client.SendAsync(Command.Snapshot, snapshot);
                 subscriptionCommand.CompleteSource.SetResult(null);
+                _logger.LogInformation("Sending snapshot to client {0}", context.ClientId);
             }
             catch (Exception ex)
             {

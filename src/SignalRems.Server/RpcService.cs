@@ -9,16 +9,22 @@ namespace SignalRems.Server;
 
 internal sealed class RpcService : IRpcService, IRpcServer
 {
+    private readonly ILogger<RpcService> _logger;
+
     private readonly ConcurrentDictionary<(string, string), Func<RpcRequestWrapper, Task<RpcResultWrapper>>> _handlers =
         new();
 
-    public void RegisterHandler<TRequest, TResponse>(IRpcHandler<TRequest, TResponse> handler)
+    public RpcService(ILogger<RpcService> logger)
+    {
+        _logger = logger;
+    }
+    public void RegisterHandler<TRequest, TResponse>(IRpcHandler<TRequest, TResponse> handler, LogLevel level = LogLevel.None)
         where TResponse : IRpcResponse where TRequest : IRpcRequest
     {
-        RegisterHandler<TRequest, TResponse>(async request => await handler.HandleRequest(request));
+        RegisterHandler<TRequest, TResponse>(async request => await handler.HandleRequest(request), level);
     }
 
-    public void RegisterHandler<TRequest, TResponse>(Func<TRequest, Task<TResponse>> handleFunc)
+    public void RegisterHandler<TRequest, TResponse>(Func<TRequest, Task<TResponse>> handleFunc, LogLevel level = LogLevel.None)
         where TRequest : IRpcRequest where TResponse : IRpcResponse
     {
         var requestType = typeof(TRequest).FullName;
@@ -30,15 +36,19 @@ internal sealed class RpcService : IRpcService, IRpcServer
 
         async Task<RpcResultWrapper> Process(RpcRequestWrapper reqObj)
         {
+            _logger.Log("Receive Request", reqObj, level);
             var req = await SerializeUtil.DeserializeAsync<TRequest, RpcRequestWrapper>(reqObj);
             Debug.Assert(req != null, nameof(req) + " != null");
             var result = await handleFunc(req);
             result.RequestId = req.RequestId;
             result.Success = string.IsNullOrEmpty(result.Error);
-            return await SerializeUtil.SerializeAsync<TResponse, RpcResultWrapper>(result);
+            var rsp = await SerializeUtil.SerializeAsync<TResponse, RpcResultWrapper>(result);
+            _logger.Log("Reply with Response", reqObj, level);
+            return rsp;
         }
 
         _handlers[(requestType, responseType)] = Process;
+        _logger.LogInformation("Register handler: {0}, {1}", requestType, responseType);
     }
 
    

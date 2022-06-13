@@ -19,8 +19,8 @@ namespace Samples.Server
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _publisherService.Start();
-            _rpcService.RegisterHandler<GetUserAgeRequest, GetUserAgeResponse>(_handler);
-            _rpcService.RegisterHandler<GetUserNameRequest, GetUserNameResponse>(_handler);
+            _rpcService.RegisterHandler<GetUserAgeRequest, GetUserAgeResponse>(_handler, LogLevel.Information);
+            _rpcService.RegisterHandler<GetUserNameRequest, GetUserNameResponse>(_handler, LogLevel.Information);
             var publisher =  _publisherService.CreatePublisher<Person, int>("Message");
             int id = 0;
             var random = new Random();
