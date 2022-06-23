@@ -43,7 +43,7 @@ internal sealed class RpcService : IRpcService, IRpcServer
             result.RequestId = req.RequestId;
             result.Success = string.IsNullOrEmpty(result.Error);
             var rsp = await SerializeUtil.SerializeAsync<TResponse, RpcResultWrapper>(result);
-            _logger.Log("Reply with Response", reqObj, level);
+            _logger.Log("Reply with Response", rsp, level);
             return rsp;
         }
 

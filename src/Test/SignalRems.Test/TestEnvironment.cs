@@ -41,7 +41,10 @@ public class TestEnvironment
         Task.Run(async () =>
         {
             var serverBuilder = WebApplication.CreateBuilder();
-            serverBuilder.Services.AddSignalRemsService(UseMessagePack, Status.Convertor);
+            serverBuilder.Services.AddSignalRemsService(o=>
+            {
+                o.MaximumReceiveMessageSize = 1024 * 128;
+            }, UseMessagePack, Status.Convertor);
             var serverApp = serverBuilder.Build();
             ServerServiceProvider = serverApp.Services;
             serverApp.MapSignalRemsPublisherHub(PubsubEndPoint);

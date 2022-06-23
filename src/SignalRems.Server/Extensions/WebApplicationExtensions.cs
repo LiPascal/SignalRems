@@ -2,6 +2,7 @@
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
+using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Interfaces;
 using SignalRems.Core.Utils;
 using SignalRems.Server.Data;
@@ -12,22 +13,29 @@ namespace SignalRems.Server.Extensions;
 
 public static class WebApplicationExtensions
 {
-    public static IServiceCollection AddSignalRemsService(this IServiceCollection service, bool useMessagePack = false,params JsonConverter[] converters)
+    public static IServiceCollection AddSignalRemsService(this IServiceCollection service, Action<HubOptions>? configHub = null,  bool useMessagePack = false,
+        params JsonConverter[] converters)
     {
         SerializeUtil.UseMessagePack = useMessagePack;
+        SerializeUtil.Converters = converters;
         if (useMessagePack)
         {
-            service.AddSignalR().AddMessagePackProtocol();
+            service.AddSignalR(o =>
+            {
+                configHub?.Invoke(o);
+            }).AddMessagePackProtocol();
         }
         else
         {
-            service.AddSignalR().AddJsonProtocol(config =>
+            service.AddSignalR(o =>
+            {
+                configHub?.Invoke(o);
+            }).AddJsonProtocol(config =>
             {
                 foreach (var converter in converters)
                 {
                     config.PayloadSerializerOptions.Converters.Add(converter);
                 }
-               
             });
         }
 
