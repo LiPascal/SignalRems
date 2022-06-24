@@ -9,7 +9,7 @@ namespace SignalRems.Core.Interfaces;
 
 public interface IRpcClient : IClient
 {
-    Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request, LogLevel level = LogLevel.None, bool compress = false)
+    Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request, LogLevel level = LogLevel.None, bool compressInRequest = false, bool compressInResult = false)
         where TRequest : class, IRpcRequest, new()
         where TResponse : class, IRpcResponse, new();
 }

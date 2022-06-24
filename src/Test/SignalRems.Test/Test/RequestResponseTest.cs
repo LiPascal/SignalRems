@@ -124,7 +124,7 @@ public class RequestResponseTest
     }
 
     [Test]
-    public async Task CompressRpcTest()
+    public async Task CompressInRequestRpcTest()
     {
         var rpcService = TestEnvironment.ServerServiceProvider.GetService<IRpcService>();
         rpcService.RegisterHandler<TestRequest, TestResponse>(r =>
@@ -133,7 +133,24 @@ public class RequestResponseTest
         DisposeActions.Push(() => rpcClient.Dispose());
         await rpcClient.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
             CancellationToken.None);
-        var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compress:true);
+        var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compressInRequest:true);
+        Assert.That(result, Is.Not.Null);
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("Test1", result.RequestId);
+        Assert.That(result.Error, Is.Null);
+        Assert.AreEqual(Status.Done, result.Status);
+    }
+    [Test]
+    public async Task CompressInResponseRpcTest()
+    {
+        var rpcService = TestEnvironment.ServerServiceProvider.GetService<IRpcService>();
+        rpcService.RegisterHandler<TestRequest, TestResponse>(r =>
+            Task.FromResult(new TestResponse() { Status = r.Status }));
+        var rpcClient = TestEnvironment.ClientServiceProvider.GetService<IRpcClient>();
+        DisposeActions.Push(() => rpcClient.Dispose());
+        await rpcClient.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
+            CancellationToken.None);
+        var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compressInResult: true);
         Assert.That(result, Is.Not.Null);
         Assert.IsTrue(result.Success);
         Assert.AreEqual("Test1", result.RequestId);

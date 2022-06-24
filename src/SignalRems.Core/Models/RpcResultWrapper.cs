@@ -11,5 +11,6 @@ namespace SignalRems.Core.Models;
 [MessagePackObject]
 internal class RpcResultWrapper: RpcWrapperBase
 {
+    [Key(2)]
     public string? Error { get; set; }
 }

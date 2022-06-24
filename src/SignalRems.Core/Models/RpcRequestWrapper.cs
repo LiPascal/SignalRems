@@ -10,4 +10,6 @@ namespace SignalRems.Core.Models;
 [MessagePackObject]
 internal class RpcRequestWrapper: RpcWrapperBase
 {
+    [Key(2)]
+    public bool CompressInResult { get; set; } = false;
 }

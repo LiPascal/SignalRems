@@ -21,6 +21,7 @@ internal class RpcWrapperBase : IRpcMessageWrapper
     [Key(0)]
     public byte[] Payload { get; set; } = Array.Empty<byte>();
 
+    [Key(1)]
     public bool UsingCompress { get; set; }
 
     public byte[]? GetPayload()
