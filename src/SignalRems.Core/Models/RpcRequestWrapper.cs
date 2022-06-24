@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using MessagePack;
-using Newtonsoft.Json;
 using SignalRems.Core.Interfaces;
 
 [assembly: InternalsVisibleTo("SignalRems.Server")]
@@ -8,12 +8,6 @@ using SignalRems.Core.Interfaces;
 namespace SignalRems.Core.Models;
 
 [MessagePackObject]
-internal class RpcRequestWrapper: IRpcMessageWrapper
+internal class RpcRequestWrapper: RpcWrapperBase
 {
-    [IgnoreMember] 
-    public string? JsonPayload { get; set; }
-
-    [Key(0)]
-    [JsonIgnore]
-    public byte[]? BinaryPayload { get; set; }
 }

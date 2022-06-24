@@ -21,7 +21,7 @@ internal class RpcClient : ClientBase, IRpcClient
     {
     }
 
-    public async Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request, LogLevel level = LogLevel.None)
+    public async Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request, LogLevel level = LogLevel.None, bool compress = false)
         where TRequest : class, IRpcRequest, new() where TResponse : class, IRpcResponse, new()
     {
         if (Connection == null)
@@ -29,7 +29,7 @@ internal class RpcClient : ClientBase, IRpcClient
             return new TResponse { RequestId = request.RequestId, Success = false, Error = NotConnectedError };
         }
 
-        var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request);
+        var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request, compress);
         Logger.Log("Sending request:", reqObj, level);
         var result = await Connection.InvokeAsync<RpcResultWrapper>(Command.Send, reqObj,
             typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);

@@ -7,15 +7,17 @@ using Microsoft.Extensions.Logging;
 using SignalRems.Core.Interfaces;
 
 
-[assembly:InternalsVisibleTo("SignalRems.Server")]
-[assembly:InternalsVisibleTo("SignalRems.Client")]
+[assembly: InternalsVisibleTo("SignalRems.Server")]
+[assembly: InternalsVisibleTo("SignalRems.Client")]
+
 namespace SignalRems.Core.Utils;
 
 internal static class SerializeUtil
 {
     private static JsonConverter[] _converters = Array.Empty<JsonConverter>();
     internal static bool UseMessagePack { get; set; } = false;
-    private static JsonSerializerOptions JsonSerializerOptions { get; set; } = new JsonSerializerOptions();
+    private static JsonSerializerOptions JsonSerializerOptions { get; set; } = new();
+
     internal static JsonConverter[] Converters
     {
         get => _converters;
@@ -25,6 +27,7 @@ internal static class SerializeUtil
             {
                 return;
             }
+
             _converters = value;
             var options = new JsonSerializerOptions();
             foreach (var converter in value)
@@ -36,12 +39,12 @@ internal static class SerializeUtil
         }
     }
 
-    private static string ToJson<T>(T entity)
+    private static byte[] ToJson<T>(T entity)
     {
-        return JsonSerializer.Serialize(entity, JsonSerializerOptions);
+        return JsonSerializer.SerializeToUtf8Bytes(entity, JsonSerializerOptions);
     }
 
-    private static T? FromJson<T>(string json)
+    private static T? FromJson<T>(byte[] json)
     {
         return JsonSerializer.Deserialize<T>(json, JsonSerializerOptions);
     }
@@ -59,39 +62,38 @@ internal static class SerializeUtil
         return await MessagePack.MessagePackSerializer.DeserializeAsync<T>(stream);
     }
 
-    internal static async ValueTask<TWrapper> SerializeAsync<T, TWrapper>(T entity) where TWrapper: IRpcMessageWrapper, new ()
+    internal static async ValueTask<TWrapper> SerializeAsync<T, TWrapper>(T entity, bool compress = false)
+        where TWrapper : IRpcMessageWrapper, new()
     {
         var wrapper = new TWrapper();
-        if (UseMessagePack)
-        {
-            wrapper.BinaryPayload = await ToBinaryAsync<T>(entity);
-        }
-        else
-        {
-            wrapper.JsonPayload = ToJson(entity);
-        }
-
+        var payload = UseMessagePack ? await ToBinaryAsync<T>(entity) : ToJson(entity);
+        wrapper.SetPayload(payload, compress);
         return wrapper;
     }
 
-    internal static async ValueTask<T?> DeserializeAsync<T, TWrapper>(TWrapper wrapper) where TWrapper : IRpcMessageWrapper
+    internal static async ValueTask<T?> DeserializeAsync<T, TWrapper>(TWrapper wrapper)
+        where TWrapper : IRpcMessageWrapper
     {
-        return UseMessagePack ? 
-            wrapper.BinaryPayload == null ? default : await FromBinaryAsync<T>(wrapper.BinaryPayload) :
-            wrapper.JsonPayload == null ? default : FromJson<T>(wrapper.JsonPayload);
+        var payload = wrapper.GetPayload();
+        if (payload == null)
+        {
+            return default;
+        }
+
+        return UseMessagePack ? await FromBinaryAsync<T>(payload) : FromJson<T>(payload);
     }
 
-    internal static void Log<TWrapper>(this ILogger logger, string prefix, TWrapper wrapper, LogLevel level) where TWrapper : IRpcMessageWrapper
+    internal static void Log<TWrapper>(this ILogger logger, string prefix, TWrapper wrapper, LogLevel level)
+        where TWrapper : IRpcMessageWrapper
     {
         if (level == LogLevel.None)
         {
             return;
         }
+
         if (!UseMessagePack)
         {
-            logger.Log(level, "{0}: {1}", prefix, wrapper.JsonPayload);
+            logger.Log(level, "{0}: {1}", prefix, wrapper.GetPayloadText());
         }
-
     }
-
 }

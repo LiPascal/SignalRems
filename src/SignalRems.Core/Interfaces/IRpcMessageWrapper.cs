@@ -12,6 +12,12 @@ namespace SignalRems.Core.Interfaces;
 
 internal interface IRpcMessageWrapper
 {
-    string? JsonPayload { get; set; }
-    byte[]? BinaryPayload { get; set; }
+    byte[] Payload { get; set; }
+
+    bool UsingCompress { get; set; }
+
+    byte[]? GetPayload();
+
+    string? GetPayloadText();
+    void SetPayload(byte[] payload, bool usingCompress = false);
 }

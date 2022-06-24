@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using MessagePack;
-using Newtonsoft.Json;
 using SignalRems.Core.Interfaces;
 
 
@@ -14,17 +9,7 @@ using SignalRems.Core.Interfaces;
 namespace SignalRems.Core.Models;
 
 [MessagePackObject]
-internal class RpcResultWrapper: IRpcMessageWrapper
+internal class RpcResultWrapper: RpcWrapperBase
 {
-    public RpcResultWrapper()
-    {
-    }
-
-    [IgnoreMember]
-    public string? JsonPayload { get; set; }
-
-    [Key(0)]
-    [JsonIgnore]
-    public byte[]? BinaryPayload { get; set; }
     public string? Error { get; set; }
 }

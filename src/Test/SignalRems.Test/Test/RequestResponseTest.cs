@@ -122,4 +122,22 @@ public class RequestResponseTest
         Assert.IsFalse(delay3000.IsCompleted);
         await delay3000;
     }
+
+    [Test]
+    public async Task CompressRpcTest()
+    {
+        var rpcService = TestEnvironment.ServerServiceProvider.GetService<IRpcService>();
+        rpcService.RegisterHandler<TestRequest, TestResponse>(r =>
+            Task.FromResult(new TestResponse() { Status = r.Status }));
+        var rpcClient = TestEnvironment.ClientServiceProvider.GetService<IRpcClient>();
+        DisposeActions.Push(() => rpcClient.Dispose());
+        await rpcClient.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
+            CancellationToken.None);
+        var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compress:true);
+        Assert.That(result, Is.Not.Null);
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("Test1", result.RequestId);
+        Assert.That(result.Error, Is.Null);
+        Assert.AreEqual(Status.Done, result.Status);
+    }
 }
