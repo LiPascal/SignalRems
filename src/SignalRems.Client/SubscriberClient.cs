@@ -32,6 +32,8 @@ internal sealed class SubscriberClient : ClientBase, ISubscriberClient
             throw new InvalidOperationException("One client instance can only subscribe once");
         }
 
+        await ConnectionCompleteTask;
+
         Logger.LogInformation("Subscribe topic = {topic}, type={type}", topic, typeof(T));
         _subscription = new Subscription<T>(_serviceCollection.GetService<ILogger<Subscription<T>>>() ?? throw new InvalidOperationException(), Connection, topic, handler, filter);
         if (Connection == null)

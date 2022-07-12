@@ -29,21 +29,34 @@ internal class RpcClient : ClientBase, IRpcClient
             return new TResponse { RequestId = request.RequestId, Success = false, Error = NotConnectedError };
         }
 
-        var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request, compressInRequest);
-        reqObj.CompressInResult = compressInResult;
-        Logger.Log("Sending request:", reqObj, level);
-        var result = await Connection.InvokeAsync<RpcResultWrapper>(Command.Send, reqObj,
-            typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);
-
-        Logger.Log("Receive response:", result, level);
-        var error = result.Error;
-        TResponse? response;
-
-        if (error != null || (response = await SerializeUtil.DeserializeAsync<TResponse, RpcResultWrapper>(result)) == null)
+        try
         {
-            Logger.LogError("Get error when sending request {id}: {error}", request.RequestId, error ?? UnknownError);
-            return new TResponse { RequestId = request.RequestId, Success = false, Error = error ?? UnknownError };
+
+            var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request, compressInRequest);
+            reqObj.CompressInResult = compressInResult;
+            Logger.Log("Sending request:", reqObj, level);
+            var result = await Connection.InvokeAsync<RpcResultWrapper>(Command.Send, reqObj,
+                typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);
+
+            Logger.Log("Receive response:", result, level);
+            var error = result.Error;
+            TResponse? response;
+
+            if (error != null ||
+                (response = await SerializeUtil.DeserializeAsync<TResponse, RpcResultWrapper>(result)) == null)
+            {
+                Logger.LogError("Get error when sending request {id}: {error}", request.RequestId,
+                    error ?? UnknownError);
+                return new TResponse { RequestId = request.RequestId, Success = false, Error = error ?? UnknownError };
+            }
+
+            return response;
         }
-        return response;
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Get error when sending request {id}: {error}", request.RequestId,
+                e.Message);
+            return new TResponse { RequestId = request.RequestId, Success = false, Error = e.Message};
+        }
     }
 }

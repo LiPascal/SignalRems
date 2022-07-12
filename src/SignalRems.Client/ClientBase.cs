@@ -17,6 +17,7 @@ namespace SignalRems.Client;
 public abstract class ClientBase : IClient
 {
     private bool _disposed = false;
+    private TaskCompletionSource _connectionCompletionSource = new();
 
     protected ClientBase(ILogger logger)
     {
@@ -25,7 +26,7 @@ public abstract class ClientBase : IClient
 
     #region interface IClient
 
-    public async Task ConnectAsync(string url, string endpoint, CancellationToken token)
+    public Task ConnectAsync(string url, string endpoint, CancellationToken token)
     {
         ChangeConnectionStatus(ConnectionStatus.Connecting);
         if (Connection != null)
@@ -49,28 +50,32 @@ public abstract class ClientBase : IClient
         Connection.Reconnected += ConnectionOnReconnected;
         Connection.Closed += ConnectionOnClosed;
         var retryAfter = 1;
-        while (true)
+        Task.Run(async () =>
         {
-            try
+            while (true)
             {
-                await Connection.StartAsync(token);
-                ChangeConnectionStatus(ConnectionStatus.Connected);
-                Logger.LogInformation("Connected to {0}, {1}", url, endpoint);
-                return;
+                try
+                {
+                    await Connection.StartAsync(token);
+                    ChangeConnectionStatus(ConnectionStatus.Connected);
+                    Logger.LogInformation("Connected to {0}, {1}", url, endpoint);
+                    return;
+                }
+                catch when (token.IsCancellationRequested)
+                {
+                    Connection = null;
+                    ChangeConnectionStatus(ConnectionStatus.Disconnected);
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError("Failed to connect server. Retry after {sec} seconds: {msg}", retryAfter, e.Message);
+                    await Task.Delay(retryAfter * 1000, new CancellationToken());
+                    retryAfter = Math.Min(retryAfter * 2, 60);
+                }
             }
-            catch when (token.IsCancellationRequested)
-            {
-                Connection = null;
-                ChangeConnectionStatus(ConnectionStatus.Disconnected);
-                return;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Failed to connect server. Retry after {sec} seconds", retryAfter);
-                await Task.Delay(retryAfter * 1000, new CancellationToken());
-                retryAfter = Math.Min(retryAfter * 2, 60);
-            }
-        }
+        }, token);
+        return Task.CompletedTask;
     }
 
     public event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
@@ -99,6 +104,8 @@ public abstract class ClientBase : IClient
     protected string? Url { get; private set; }
 
     protected ILogger Logger { get; }
+
+    protected Task ConnectionCompleteTask => _connectionCompletionSource.Task;
 
     protected virtual Task ConnectionOnReconnected(string? newId)
     {
@@ -140,8 +147,21 @@ public abstract class ClientBase : IClient
 
     private void ChangeConnectionStatus(ConnectionStatus status)
     {
+        if (status == ConnectionStatus)
+        {
+            return;
+        }
+
+        if (ConnectionStatus == ConnectionStatus.Connected)
+        {
+            Interlocked.Exchange(ref _connectionCompletionSource, new TaskCompletionSource());
+        }
         var handler = ConnectionStatusChanged;
         ConnectionStatus = status;
+        if (ConnectionStatus == ConnectionStatus.Connected)
+        {
+            _connectionCompletionSource.SetResult();
+        }
         handler?.Invoke(this, new ConnectionStatusChangedEventArgs(status));
     }
 
