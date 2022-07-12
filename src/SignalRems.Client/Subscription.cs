@@ -20,9 +20,9 @@ internal class Subscription<T> : ISubscription where T : class, new()
     private bool _isSubscribing;
     private bool _disposed;
 
-    public Subscription(ILogger<Subscription<T>> logger, HubConnection connection, string topic, ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
+    public Subscription(ILogger<Subscription<T>> logger, HubConnection connection, string topic,
+        ISubscriptionHandler<T> handler, Expression<Func<T, bool>>? filter)
     {
-
         _logger = logger;
         _connection = connection;
         _topic = topic;
@@ -42,6 +42,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
         {
             return;
         }
+
         var snapshotDisposable = _connection.On<T[]>(Command.Snapshot, snapshot =>
         {
             _handler.OnSnapshotBegin();
@@ -49,6 +50,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
             {
                 _handler.OnMessageReceived(item);
             }
+
             _logger.LogInformation("Get {0} items in snap short", snapshot.Length);
             _handler.OnSnapshotEnd();
         });
@@ -73,15 +75,16 @@ internal class Subscription<T> : ISubscription where T : class, new()
                 _topic, FilterUtil.ToFilterString(_filter));
             if (!string.IsNullOrEmpty(error))
             {
+                _logger.LogError("Get error when subscribe to topic {0}, filter = {1}, error = {2}", _topic, filter,
+                    error);
                 _handler.OnError(error);
             }
         }
         catch (Exception ex)
         {
+            _logger.LogError("Get error when subscribe to topic {0}, error = {1}", _topic, ex.GetFullMessage());
             _handler.OnError(ex.GetFullMessage());
         }
-
-       
     }
 
     public void Reset()
@@ -114,6 +117,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
         _disposed = true;
         DoDispose();
     }
+
     private async void DoDispose()
     {
         _isSubscribing = false;
@@ -138,12 +142,10 @@ internal class Subscription<T> : ISubscription where T : class, new()
                 }
             }
         }
-        catch(Exception e)
+        catch (Exception e)
         {
-            _logger?.LogError("{msg}", e.Message);
+            _logger.LogError("{msg}", e.Message);
             _handler.OnError(e.GetFullMessage());
         }
     }
-
-    
 }

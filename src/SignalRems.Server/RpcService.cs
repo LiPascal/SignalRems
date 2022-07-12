@@ -58,6 +58,7 @@ internal sealed class RpcService : IRpcService, IRpcServer
         var key = (requestType, responseType);
         if (!_handlers.ContainsKey(key))
         {
+            _logger.LogError($"Receive not support {requestType}/{responseType}");
             return new RpcResultWrapper() { Error = $"{requestType}/{responseType} is not supported" };
         }
 
@@ -69,7 +70,8 @@ internal sealed class RpcService : IRpcService, IRpcServer
         }
         catch (Exception e)
         {
-            return new RpcResultWrapper() { Error = e.GetFullMessage() };
+            _logger.LogError(e, "Error when process request {0}", requestType);
+            return new RpcResultWrapper() { Error = "Error when process request, message = " + e.GetFullMessage() };
         }
     }
 }

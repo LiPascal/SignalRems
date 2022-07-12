@@ -14,7 +14,7 @@ internal static class ExceptionUtils
 {
     internal static string GetFullMessage(this Exception e)
     {
-        return GetFullMessage(e, string.Empty);
+        return e.GetType().Name + ":\n " + GetFullMessage(e, string.Empty);
     }
 
     private static string GetFullMessage(Exception e, string prefix)

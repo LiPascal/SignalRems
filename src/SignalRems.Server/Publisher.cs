@@ -160,6 +160,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error when process subscribe command");
             _subscriptions.Remove(subscriptionCommand.Context.SubscriptionId);
             subscriptionCommand.CompleteSource.SetResult(ex.GetFullMessage());
             return;
