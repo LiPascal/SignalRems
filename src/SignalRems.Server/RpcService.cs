@@ -71,7 +71,7 @@ internal sealed class RpcService : IRpcService, IRpcServer
         catch (Exception e)
         {
             _logger.LogError(e, "Error when process request {0}", requestType);
-            return new RpcResultWrapper() { Error = "Error when process request, message = " + e.GetFullMessage() };
+            return new RpcResultWrapper() { Error = e.GetFullMessage() };
         }
     }
 }

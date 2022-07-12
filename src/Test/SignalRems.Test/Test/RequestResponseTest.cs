@@ -64,7 +64,7 @@ public class RequestResponseTest
         Assert.That(result, Is.Not.Null);
         Assert.IsFalse(result.Success);
         Assert.AreEqual("Test1", result.RequestId);
-        Assert.IsTrue(result.Error.StartsWith("Error in Test"));
+        Assert.IsTrue(result.Error.StartsWith("Exception:\n Error in Test"));
     }
 
     [Test]
