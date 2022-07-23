@@ -25,6 +25,8 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
     private readonly Dictionary<string, SubscriptionContext> _subscriptions = new();
     private readonly List<T> _buffer = new();
+    private readonly List<T> _deleteBuffer = new();
+
     private readonly Dictionary<TKey, T> _cache = new();
     private readonly Func<T, TKey> _keyGetter;
     private readonly IHubContext<PubSubHub> _hubContext;
@@ -39,22 +41,30 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
         var keyPropertyInfos = typeof(T).GetProperties()
             .Where(x => x.GetCustomAttributes(typeof(KeyAttribute), true).Any()).ToArray();
-        if (keyPropertyInfos.Length != 1) throw new InvalidPubSubEntityException(keyPropertyInfos.Length, typeof(T));
+        if (keyPropertyInfos.Length != 1)
+        {
+            throw new InvalidPubSubEntityException(keyPropertyInfos.Length, typeof(T));
+        }
 
         if (keyPropertyInfos[0].PropertyType != typeof(TKey))
+        {
             throw new InvalidPubSubEntityException(
                 $"Type {typeof(T).Name} property {keyPropertyInfos[0].Name} is not type {typeof(TKey).Name}.");
+        }
 
         var getter = keyPropertyInfos[0].GetGetMethod();
 
         if (getter == null)
+        {
             throw new InvalidPubSubEntityException(
                 $"Type {typeof(T).Name} property {keyPropertyInfos[0].Name} doesn't have public getter.");
+        }
 
-        _keyGetter = entity => Publisher<T, TKey>.GetKey(getter, entity);
+        _keyGetter = entity => GetKey(getter, entity);
     }
 
     #region interface IPublisher<T>
+
     public void Publish(T entity)
     {
         lock (_buffer)
@@ -75,8 +85,38 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         _isDirty = true;
     }
 
-    public string Topic { get; }
+    public void Delete(T entity)
+    {
+        lock (_deleteBuffer)
+        {
+            _deleteBuffer.Add(entity);
+        }
 
+        lock (_buffer)
+        {
+            _buffer.Add(entity);
+        }
+
+        _isDirty = true;
+    }
+
+    public void Delete(IEnumerable<T> entities)
+    {
+        var array = entities.ToArray();
+        lock (_deleteBuffer)
+        {
+            _deleteBuffer.AddRange(array);
+        }
+
+        lock (_buffer)
+        {
+            _buffer.AddRange(array);
+        }
+
+        _isDirty = true;
+    }
+
+    public string Topic { get; }
 
     #endregion
 
@@ -112,11 +152,12 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 }
 
                 updated = await DoPublishAsync() || updated;
-
             } while (updated);
+
             IsIdle = true;
         });
     }
+
     #endregion
 
     #region private methods
@@ -192,19 +233,42 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     {
         var updated = false;
 
-        T[] toPub;
+        T[] buffer;
+        T[] toDelete;
         lock (_buffer)
         {
-            toPub = _buffer.ToArray();
+            buffer = _buffer.ToArray();
             _buffer.Clear();
         }
 
-        if (toPub.Any())
+        lock (_deleteBuffer)
         {
-            foreach (var entity in toPub)
+            toDelete = _deleteBuffer.ToArray();
+            _deleteBuffer.Clear();
+        }
+
+        if (buffer.Any())
+        {
+            foreach (var entity in buffer)
             {
                 var key = _keyGetter(entity);
-                _cache[key] = entity;
+                var isDelete = false;
+                if (toDelete.Contains(entity))
+                {
+                    if (!_cache.ContainsKey(key))
+                    {
+                        continue;
+                    }
+
+                    _cache.Remove(key);
+                    isDelete = true;
+                }
+                else
+                {
+                    _cache[key] = entity;
+                }
+
+
                 var contexts = _subscriptions.Values.Where(x => x.IsSubscribing);
                 foreach (var context in contexts)
                 {
@@ -213,25 +277,34 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                         _subscriptions.Remove(context.SubscriptionId);
                         continue;
                     }
+
                     if (context.Filter is Func<T, bool> filter && !filter(entity))
                     {
                         continue;
                     }
+
                     try
                     {
-                        await _hubContext.Clients.Client(context.ClientId).SendAsync(Command.Publish, entity);
+                        if (isDelete)
+                        {
+                            await _hubContext.Clients.Client(context.ClientId)
+                                .SendAsync(Command.Delete, key.ToString());
+                        }
+                        else
+                        {
+                            await _hubContext.Clients.Client(context.ClientId)
+                                .SendAsync(Command.Publish, entity);
+                        }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogWarning("Get error when publishing message", ex);
                     }
                 }
-
             }
 
             updated = true;
         }
-
 
         return updated;
     }
@@ -242,13 +315,15 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     private static TKey GetKey(MethodBase getter, T entity)
     {
         var key = getter.Invoke(entity, null);
-        if (key == null) throw new InvalidPubSubEntityException("Key property can not be null");
+        if (key == null)
+        {
+            throw new InvalidPubSubEntityException("Key property can not be null");
+        }
+
         return (TKey)key;
     }
-    
+
     public void Dispose()
     {
     }
-
-    
 }

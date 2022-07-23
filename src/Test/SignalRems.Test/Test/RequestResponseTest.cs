@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +43,7 @@ public class RequestResponseTest
         DisposeActions.Push(() => rpcClient.Dispose());
         await rpcClient.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
             CancellationToken.None);
+        await rpcClient.ConnectionCompleteTask;
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done});
         Assert.That(result, Is.Not.Null);
         Assert.IsTrue(result.Success);
@@ -60,6 +62,7 @@ public class RequestResponseTest
         DisposeActions.Push(() => rpcClient.Dispose());
         await rpcClient.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
             CancellationToken.None);
+        await rpcClient.ConnectionCompleteTask;
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1" });
         Assert.That(result, Is.Not.Null);
         Assert.IsFalse(result.Success);
@@ -87,6 +90,8 @@ public class RequestResponseTest
             CancellationToken.None);
         await rpcClient2.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
             CancellationToken.None);
+        await rpcClient1.ConnectionCompleteTask;
+        await rpcClient2.ConnectionCompleteTask;
         List<Task<TestResponse>> responses1 = new();
         List<Task<TestResponse>> responses2 = new();
         for (int i = 0; i < 5; ++i)
@@ -133,6 +138,7 @@ public class RequestResponseTest
         DisposeActions.Push(() => rpcClient.Dispose());
         await rpcClient.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
             CancellationToken.None);
+        await rpcClient.ConnectionCompleteTask;
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compressInRequest:true);
         Assert.That(result, Is.Not.Null);
         Assert.IsTrue(result.Success);
@@ -147,11 +153,14 @@ public class RequestResponseTest
         rpcService.RegisterHandler<TestRequest, TestResponse>(r =>
             Task.FromResult(new TestResponse() { Status = r.Status }));
         var rpcClient = TestEnvironment.ClientServiceProvider.GetService<IRpcClient>();
+       
         DisposeActions.Push(() => rpcClient.Dispose());
         await rpcClient.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.RpcEndPoint,
             CancellationToken.None);
+        await rpcClient.ConnectionCompleteTask;
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compressInResult: true);
         Assert.That(result, Is.Not.Null);
+        
         Assert.IsTrue(result.Success);
         Assert.AreEqual("Test1", result.RequestId);
         Assert.That(result.Error, Is.Null);

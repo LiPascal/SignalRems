@@ -22,6 +22,11 @@ internal class PersonManager : ISubscriptionHandler<Person>
         _logger.LogInformation("Receive Id = {Id}, Name = {Name}, Age = {Age}", message.Id, message.Name, message.Age);
     }
 
+    public void OnMessageDelete(string keyString)
+    {
+        _logger.LogInformation("Receive delete Id = {0}", keyString);
+    }
+
     public void OnSnapshotEnd()
     {
         _logger.LogInformation("Snapshot End.");

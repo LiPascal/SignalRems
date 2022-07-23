@@ -127,4 +127,53 @@ public class PubsubTests
         Assert.AreEqual(5, handler1.Models.Count);
         Assert.AreEqual(5, handler2.SnapShotCount);
     }
+
+
+    [Test]
+    public async Task PubsubDeleteTest()
+    {
+        var model1 = new Model { Id = 5, Name = "ABC", CreateTime = DateTime.Now };
+        var model2 = new Model { Id = 6, Name = "XYZ", CreateTime = DateTime.Now };
+        var topic = "PubsubDeleteTest";
+        var publisherService = TestEnvironment.ServerServiceProvider.GetService<IPublisherService>();
+        var publisher = publisherService.CreatePublisher<Model, int>(topic);
+        publisher.Publish(model1);
+        publisher.Publish(model2);
+        DisposeActions.Push(() => publisher.Dispose());
+
+        var handler1 = new ModelHandler();
+        var client1 = TestEnvironment.ClientServiceProvider.GetService<ISubscriberClient>();
+        await client1.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.PubsubEndPoint, CancellationToken.None);
+        await client1.SubscribeAsync(topic, handler1);
+        DisposeActions.Push(() => client1.Dispose());
+
+        var handler2 = new ModelHandler();
+        var client2 = TestEnvironment.ClientServiceProvider.GetService<ISubscriberClient>();
+        await client2.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.PubsubEndPoint, CancellationToken.None);
+        await client2.SubscribeAsync(topic, handler2, m => m.Name.StartsWith("A"));
+        DisposeActions.Push(() => client2.Dispose());
+
+        await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
+        await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 1, 2000);
+
+        publisher.Delete(model1);
+
+        await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 1, 2000);
+        await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
+
+        Assert.AreEqual(1, handler1.Models.Count);
+        Assert.AreEqual(0, handler2.Models.Count);
+        Assert.AreEqual(1, handler1.DeletedKeys.Count);
+        Assert.AreEqual(1, handler2.DeletedKeys.Count);
+
+        publisher.Delete(model2);
+
+        await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 0, 2000);
+        await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
+
+        Assert.AreEqual(0, handler1.Models.Count);
+        Assert.AreEqual(0, handler2.Models.Count);
+        Assert.AreEqual(2, handler1.DeletedKeys.Count);
+        Assert.AreEqual(1, handler2.DeletedKeys.Count);
+    }
 }

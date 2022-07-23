@@ -82,6 +82,8 @@ public abstract class ClientBase : IClient
 
     public ConnectionStatus ConnectionStatus { get; private set; }
 
+    public Task ConnectionCompleteTask => _connectionCompletionSource.Task;
+
     public void Dispose()
     {
         if (_disposed)
@@ -104,8 +106,6 @@ public abstract class ClientBase : IClient
     protected string? Url { get; private set; }
 
     protected ILogger Logger { get; }
-
-    protected Task ConnectionCompleteTask => _connectionCompletionSource.Task;
 
     protected virtual Task ConnectionOnReconnected(string? newId)
     {

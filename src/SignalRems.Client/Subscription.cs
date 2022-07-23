@@ -55,6 +55,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
             _handler.OnSnapshotEnd();
         });
         var publishDisposable = _connection.On<T>(Command.Publish, item => { _handler.OnMessageReceived(item); });
+        var deleteDisposable = _connection.On<string>(Command.Delete, keyString => { _handler.OnMessageDelete(keyString); });
         lock (_listeners)
         {
             foreach (var listener in _listeners)
@@ -65,6 +66,7 @@ internal class Subscription<T> : ISubscription where T : class, new()
             _listeners.Clear();
             _listeners.Add(snapshotDisposable);
             _listeners.Add(publishDisposable);
+            _listeners.Add(deleteDisposable);
         }
 
         try

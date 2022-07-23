@@ -6,6 +6,8 @@ public interface ISubscriptionHandler<in T> where T : class, new()
 
     void OnMessageReceived(T message);
 
+    void OnMessageDelete(string keyString);
+
     void OnSnapshotEnd();
 
     void OnError(string error);

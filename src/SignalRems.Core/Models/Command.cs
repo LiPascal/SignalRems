@@ -4,6 +4,7 @@
     {
         // Commands from server to client
         public const string Publish = "Publish";
+        public const string Delete = "Delete";
         public const string Snapshot = "Snapshot";
         
         // Commands from client to server

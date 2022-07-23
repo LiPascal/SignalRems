@@ -12,4 +12,5 @@ public interface IClient : IDisposable
     Task ConnectAsync(string url, string endpoint, CancellationToken token);
     ConnectionStatus ConnectionStatus { get; }
     event EventHandler<ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
+    Task ConnectionCompleteTask { get; }
 }
