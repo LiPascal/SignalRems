@@ -96,7 +96,7 @@ public class RequestResponseTest
         List<Task<TestResponse>> responses2 = new();
         for (int i = 0; i < 5; ++i)
         {
-            responses1.Add(rpcClient1.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = $"Test1_{i}", ProcessTime = 500}));
+            responses1.Add(rpcClient1.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = $"Test1_{i}", ProcessTime = 600}));
         }
         for (int i = 0; i < 2; ++i)
         {
@@ -121,10 +121,10 @@ public class RequestResponseTest
         // but not all tasks are completed; 
         Assert.IsFalse(responses1.All(x => x.IsCompleted));
         await Task.WhenAll(responses1.ToArray());
-        // The first client's tasks should use more than 1000 ms. 
-        Assert.IsTrue(delay1000.IsCompleted);
-        // The first client's tasks should complete within 3000 ms. 
-        Assert.IsFalse(delay3000.IsCompleted);
+        // The first client's tasks should use more than 500 ms. 
+        Assert.IsTrue(delay500.IsCompleted);
+        // The first client's tasks should complete within 1000 ms. 
+        Assert.IsFalse(delay1000.IsCompleted);
         await delay3000;
     }
 

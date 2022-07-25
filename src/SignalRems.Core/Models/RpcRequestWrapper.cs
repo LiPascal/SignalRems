@@ -12,4 +12,6 @@ internal class RpcRequestWrapper: RpcWrapperBase
 {
     [Key(2)]
     public bool CompressInResult { get; set; } = false;
+
+    public string ReplyOnTopic { get; set; } = null!;
 }

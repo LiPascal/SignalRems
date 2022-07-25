@@ -9,11 +9,13 @@ namespace SignalRems.Server.Hubs;
 internal class RpcHub : Hub
 {
     private readonly IRpcServer _rpcServer;
+    private readonly IHubContext<RpcHub> _hubContext;
     private readonly ILogger<RpcHub> _logger;
 
-    public RpcHub(IRpcServer rpcServer, ILogger<RpcHub> logger)
+    public RpcHub(IRpcServer rpcServer, IHubContext<RpcHub> hubContext, ILogger<RpcHub> logger)
     {
         _rpcServer = rpcServer;
+        _hubContext = hubContext;
         _logger = logger;
     }
 
@@ -24,7 +26,8 @@ internal class RpcHub : Hub
         RemoteCallerClient.Clients[Context.ConnectionId] = new RemoteCallerClient(Context.ConnectionId);
         await base.OnConnectedAsync();
         var feature = Context.Features.Get<IHttpConnectionFeature>();
-        _logger.LogInformation("Established new connection with {0}, ip = {1}, port = {2}", Context.ConnectionId, feature?.RemoteIpAddress, feature?.RemotePort);
+        _logger.LogInformation("Established new connection with {0}, ip = {1}, port = {2}", Context.ConnectionId,
+            feature?.RemoteIpAddress, feature?.RemotePort);
     }
 
     public override async Task OnDisconnectedAsync(Exception? e)
@@ -37,8 +40,22 @@ internal class RpcHub : Hub
     #endregion
 
     // ReSharper disable once UnusedMember.Global
-    public async Task<RpcResultWrapper> Send(RpcRequestWrapper request, string requestType, string responseType)
+    public void Send(RpcRequestWrapper request, string requestType, string responseType)
     {
-        return await _rpcServer.ProcessAsync(request, requestType, responseType);
+        var id = Context.ConnectionId;
+        Task.Run(async () =>
+        {
+            var result = await _rpcServer.ProcessAsync(request, requestType, responseType);
+            if (RemoteCallerClient.Clients.TryGetValue(id, out var caller) && caller.IsConnected)
+            {
+                var client = _hubContext.Clients.Client(id);
+                _logger.LogDebug("Reply message on topic {0}", request.ReplyOnTopic);
+                await client.SendAsync(request.ReplyOnTopic, result);
+            }
+            else
+            {
+                _logger.LogWarning("client disconnected, discard result for on topic {0}", request.ReplyOnTopic);
+            }
+        });
     }
 }

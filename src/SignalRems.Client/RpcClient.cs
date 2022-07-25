@@ -21,7 +21,8 @@ internal class RpcClient : ClientBase, IRpcClient
     {
     }
 
-    public async Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request, LogLevel level = LogLevel.None, bool compressInRequest = false, bool compressInResult = false)
+    public async Task<TResponse> SendAsync<TRequest, TResponse>(TRequest request, LogLevel level = LogLevel.None,
+        bool compressInRequest = false, bool compressInResult = false)
         where TRequest : class, IRpcRequest, new() where TResponse : class, IRpcResponse, new()
     {
         if (Connection == null)
@@ -31,13 +32,16 @@ internal class RpcClient : ClientBase, IRpcClient
 
         try
         {
-
             var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request, compressInRequest);
             reqObj.CompressInResult = compressInResult;
-            Logger.Log("Sending request:", reqObj, level);
-            var result = await Connection.InvokeAsync<RpcResultWrapper>(Command.Send, reqObj,
+            reqObj.ReplyOnTopic = Guid.NewGuid().ToString().Replace("-", "");
+            Logger.Log($"Sending request on topic {reqObj.ReplyOnTopic}:", reqObj, level);
+            var tcs = new TaskCompletionSource<RpcResultWrapper>();
+            var disposable =  Connection.On<RpcResultWrapper>(reqObj.ReplyOnTopic, result => { tcs.SetResult(result); });
+            await Connection.InvokeAsync(Command.Send, reqObj,
                 typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);
-
+            var result = await tcs.Task;
+            disposable.Dispose();
             Logger.Log("Receive response:", result, level);
             var error = result.Error;
             TResponse? response;
@@ -56,7 +60,7 @@ internal class RpcClient : ClientBase, IRpcClient
         {
             Logger.LogError(e, "Get error when sending request {id}: {error}", request.RequestId,
                 e.Message);
-            return new TResponse { RequestId = request.RequestId, Success = false, Error = e.Message};
+            return new TResponse { RequestId = request.RequestId, Success = false, Error = e.Message };
         }
     }
 }
