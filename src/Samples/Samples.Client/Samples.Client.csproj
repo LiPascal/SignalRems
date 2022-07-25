@@ -6,9 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-SignalRemsClient-CD14BD0C-E6F8-4D9A-A553-71522763FAAE</UserSecretsId>
     <Company>Pascal Li</Company>
-    <Version>1.0.9</Version>
-    <FileVersion>1.0.9</FileVersion>
-    <AssemblyVersion>1.0.9</AssemblyVersion>
+    <Version>1.0.10</Version>
+    <FileVersion>1.0.10</FileVersion>
+    <AssemblyVersion>1.0.10</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
