@@ -173,6 +173,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
         var needsSnapshot = false;
         Func<T, bool>? filter = null;
+        var keys = Array.Empty<TKey>();
         try
         {
             switch (subscriptionCommand.CommandName)
@@ -193,6 +194,14 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 case Command.Subscribe:
                     context.IsSubscribing = true;
                     filter = FilterUtil.ToFilter<T>(subscriptionCommand.Parameters[0] as string);
+                    break;
+                case Command.SubscribeWithKeys:
+                    context.IsSubscribing = true;
+                    keys = KeyWrapper<TKey>.FromJson(subscriptionCommand.Parameters[0] as string)?.Keys;
+                    break;
+                case Command.AddSubscriptionKeys:
+                case Command.RemoveSubscriptionKeys:
+                    keys = KeyWrapper<TKey>.FromJson(subscriptionCommand.Parameters[0] as string)?.Keys;
                     break;
                 default:
                     subscriptionCommand.CompleteSource.SetResult("Should not happen here, unknown action");
@@ -216,6 +225,57 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 await client.SendAsync(Command.Snapshot, snapshot);
                 subscriptionCommand.CompleteSource.SetResult(null);
                 _logger.LogInformation("Sending snapshot to client {0}", context.ClientId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Get error when sending snapshot.", ex);
+                subscriptionCommand.CompleteSource.SetResult($"Get error when sending snapshot.{ex.GetFullMessage()}");
+            }
+        }
+        else if (keys != null && keys.Any() && SubscriptionClient.Clients[context.ClientId].IsConnected)
+        {
+            if (!keys.All(x => x is TKey))
+            {
+                subscriptionCommand.CompleteSource.SetResult($"The key is not type {typeof(TKey).Name}");
+                return;
+            }
+
+            try
+            {
+                var client = _hubContext.Clients.Client(context.ClientId);
+                if (subscriptionCommand.CommandName == Command.RemoveSubscriptionKeys)
+                {
+                    foreach (var key in keys.Where(_cache.ContainsKey))
+                    {
+                        await client.SendAsync(Command.Delete, key.ToString());
+                    }
+
+                    context.Keys = context.Keys.OfType<TKey>().Except(keys).OfType<object>().ToArray();
+                }
+                else
+                {
+                    var elements = keys.Where(_cache.ContainsKey).Select(x => _cache[x]).ToArray();
+                    if (elements.Any())
+                    {
+                        if (subscriptionCommand.CommandName == Command.AddSubscriptionKeys)
+                        {
+                            foreach (var element in elements)
+                            {
+                                await client.SendAsync(Command.Publish, element);
+                            }
+
+                            context.Keys = context.Keys.OfType<TKey>().Concat(keys).Distinct()
+                                .OfType<object>().ToArray();
+                        }
+                        else
+                        {
+                            await client.SendAsync(Command.Snapshot, elements);
+                            context.Keys = keys.OfType<object>().ToArray();
+                        }
+                    }
+                }
+
+                subscriptionCommand.CompleteSource.SetResult(null);
             }
             catch (Exception ex)
             {
@@ -279,6 +339,11 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                     }
 
                     if (context.Filter is Func<T, bool> filter && !filter(entity))
+                    {
+                        continue;
+                    }
+
+                    if (context.Keys.Any() && !context.Keys.Any(x => Equals(x, key)))
                     {
                         continue;
                     }

@@ -1,13 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO.Compression;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
-using ICSharpCode.SharpZipLib.Lzw;
 using MessagePack;
 using SignalRems.Core.Interfaces;
 
@@ -73,5 +65,10 @@ internal class RpcWrapperBase : IRpcMessageWrapper
         using var outStream = new MemoryStream(512);
         GZip.Compress(inStream, outStream, true);
         return outStream.ToArray();
+    }
+
+    public override string? ToString()
+    {
+        return GetPayloadText();
     }
 }

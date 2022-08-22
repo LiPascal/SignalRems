@@ -176,4 +176,48 @@ public class PubsubTests
         Assert.AreEqual(2, handler1.DeletedKeys.Count);
         Assert.AreEqual(1, handler2.DeletedKeys.Count);
     }
+
+    [Test]
+    public async Task PubsubWithKeysTest()
+    {
+        var handler = new ModelHandler();
+        var model1 = new Model { Id = 5, Name = "ABC", CreateTime = DateTime.Now };
+        var model2 = new Model { Id = 6, Name = "XYZ", CreateTime = DateTime.Now };
+        var model3 = new Model { Id = 7, Name = "XYZ", CreateTime = DateTime.Now };
+        var model4 = new Model { Id = 8, Name = "XYZ", CreateTime = DateTime.Now };
+        var topic = "PubsubWithKeysTest";
+        var publisherService = TestEnvironment.ServerServiceProvider.GetService<IPublisherService>();
+        var publisher = publisherService.CreatePublisher<Model, int>(topic);
+        publisher.Publish(model1);
+
+        DisposeActions.Push(() => publisher.Dispose());
+        var client = TestEnvironment.ClientServiceProvider.GetService<ISubscriberClient>();
+        await client.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.PubsubEndPoint, CancellationToken.None);
+        await client.SubscribeWithKeysAsync(topic, handler, 5, 6);
+
+        DisposeActions.Push(() => client.Dispose());
+        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 1, 2000);
+        Assert.AreEqual(1, handler.Models.Count);
+
+        publisher.Publish(model2);
+        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
+        Assert.AreEqual(2, handler.Models.Count);
+
+        publisher.Publish(model3);
+        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 3, 2000);
+        Assert.AreEqual(2, handler.Models.Count);
+
+        await client.SubscribeWithKeysAsync(topic, handler, 7, 8);
+        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 3, 2000);
+        Assert.AreEqual(3, handler.Models.Count);
+        
+        await client.UnSubscribeWithKeysAsync(topic, handler, 5, 8);
+        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
+        Assert.AreEqual(2, handler.Models.Count);
+
+        publisher.Publish(model4);
+        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
+        Assert.AreEqual(2, handler.Models.Count);
+
+    }
 }

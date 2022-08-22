@@ -75,6 +75,53 @@ internal class PubSubHub : Hub
         return await tcs.Task;
     }
 
+    public async Task<string?> SubscribeWithKeys(string subscriptionId, string topic, string keys)
+    {
+        var clientSubscriptionContext = GetClientSubscriptionContext(subscriptionId, Context.ConnectionId, topic);
+        if (clientSubscriptionContext.IsSubscribing)
+        {
+            return "The subscription has started already";
+        }
+        var tcs = new TaskCompletionSource<string?>();
+        SubscriptionClient.Clients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
+            Command.SubscribeWithKeys, tcs, keys));
+        return await tcs.Task;
+    }
+
+    public async Task<string?> AddSubscriptionKeys(string subscriptionId, string keys)
+    {
+        if (!SubscriptionContext.Subscriptions.ContainsKey(subscriptionId))
+        {
+            return "Subscription doesn't exists";
+        }
+        var clientSubscriptionContext = SubscriptionContext.Subscriptions[subscriptionId]; 
+        if (!clientSubscriptionContext.IsSubscribing)
+        {
+            return "The subscription has not started.";
+        }
+        var tcs = new TaskCompletionSource<string?>();
+        SubscriptionClient.Clients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
+            Command.AddSubscriptionKeys, tcs, keys));
+        return await tcs.Task;
+    }
+
+    public async Task<string?> RemoveSubscriptionKeys(string subscriptionId, string keys)
+    {
+        if (!SubscriptionContext.Subscriptions.ContainsKey(subscriptionId))
+        {
+            return "Subscription doesn't exists";
+        }
+        var clientSubscriptionContext = SubscriptionContext.Subscriptions[subscriptionId];
+        if (!clientSubscriptionContext.IsSubscribing)
+        {
+            return "The subscription has not started.";
+        }
+        var tcs = new TaskCompletionSource<string?>();
+        SubscriptionClient.Clients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
+            Command.RemoveSubscriptionKeys, tcs, keys));
+        return await tcs.Task;
+    }
+
     // ReSharper disable once UnusedMember.Global
     public async Task<string?> UnSubscribe(string subscriptionId)
     {

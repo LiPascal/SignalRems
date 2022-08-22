@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace SignalRems.Client;
 
-internal interface ISubscription: IDisposable
+internal interface ISubscriptionByKeys<in TKey>: ISubscription
 {
-    Task StartAsync();
-    Task ReStartAsync();
-    void Reset();
-    void Closed();
+    Task<string?> AddKeysAsync(params TKey[] keys);
+    Task<string?> RemoveKeysAsync(params TKey[] keys);
 }

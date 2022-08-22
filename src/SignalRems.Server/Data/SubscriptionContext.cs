@@ -18,4 +18,5 @@ internal class SubscriptionContext
     public string Topic { get; }
     public bool IsSubscribing { get; set; }
     public object? Filter { get; set; }
+    public object[] Keys { get; set; } = Array.Empty<object>();
 }
