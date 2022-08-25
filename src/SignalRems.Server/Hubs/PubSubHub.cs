@@ -26,7 +26,13 @@ internal class PubSubHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? e)
     {
-        SubscriptionClient.Clients[Context.ConnectionId].IsConnected = false;
+        var client = SubscriptionClient.Clients[Context.ConnectionId];
+        client.IsConnected = false;
+        var subscription = SubscriptionContext.Subscriptions.Values.FirstOrDefault(x => x.ClientId == client.ClientId);
+        if (subscription != null)
+        {
+            subscription.IsSubscribing = false;
+        }
         await base.OnDisconnectedAsync(e);
         _logger.LogInformation("Connection {0} lost", Context.ConnectionId);
     }
@@ -140,10 +146,14 @@ internal class PubSubHub : Hub
 
     #region private
 
-    private static SubscriptionContext GetClientSubscriptionContext(string subscriptionId, string clientId, string topic)
+    private SubscriptionContext GetClientSubscriptionContext(string subscriptionId, string clientId, string topic)
     {
         var client = SubscriptionClient.Clients[clientId];
-        var subscriptionContext = SubscriptionContext.Subscriptions.GetOrAdd(subscriptionId, t => new SubscriptionContext(subscriptionId, client.ClientId, topic));
+        var subscriptionContext = SubscriptionContext.Subscriptions.GetOrAdd(subscriptionId, t =>
+        {
+            _logger.LogInformation("Create new subscription client SubscriptionId={0} ClientId={1} Topic={2}", subscriptionId, client.ClientId, topic);
+            return new SubscriptionContext(subscriptionId, client.ClientId, topic);
+        });
 
         if (subscriptionContext.ClientId != clientId)
         {
@@ -153,6 +163,7 @@ internal class PubSubHub : Hub
             }
             //It happens when client reconnect;
             subscriptionContext.ClientId = clientId;
+            subscriptionContext.IsSubscribing = false;
             client.SubscriptionContexts[subscriptionId] = subscriptionContext;
         }
         return subscriptionContext;
