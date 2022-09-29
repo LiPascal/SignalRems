@@ -35,14 +35,14 @@ internal class RpcClient : ClientBase, IRpcClient
             var reqObj = await SerializeUtil.SerializeAsync<TRequest, RpcRequestWrapper>(request, compressInRequest);
             reqObj.CompressInResult = compressInResult;
             reqObj.ReplyOnTopic = Guid.NewGuid().ToString().Replace("-", "");
-            Logger.Log($"Sending request on topic {reqObj.ReplyOnTopic}:", reqObj, level);
+            Logger.Log($"Sending request {typeof(TRequest).ToLogName()} on topic {reqObj.ReplyOnTopic}:", reqObj, level);
             var tcs = new TaskCompletionSource<RpcResultWrapper>();
             var disposable =  Connection.On<RpcResultWrapper>(reqObj.ReplyOnTopic, result => { tcs.SetResult(result); });
             await Connection.InvokeAsync(Command.Send, reqObj,
                 typeof(TRequest).FullName, typeof(TResponse).FullName).ConfigureAwait(false);
             var result = await tcs.Task;
             disposable.Dispose();
-            Logger.Log("Receive response:", result, level);
+            Logger.Log($"Receive response {typeof(TResponse).ToLogName()}:", result, level);
             var error = result.Error;
             TResponse? response;
 

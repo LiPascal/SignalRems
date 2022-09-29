@@ -29,6 +29,7 @@ internal sealed class RpcService : IRpcService, IRpcServer
     {
         var requestType = typeof(TRequest).FullName;
         var responseType = typeof(TResponse).FullName;
+        
         if (responseType == null || requestType == null)
         {
             throw new NotSupportedException("Invalid request/response type");
@@ -36,14 +37,14 @@ internal sealed class RpcService : IRpcService, IRpcServer
 
         async Task<RpcResultWrapper> Process(RpcRequestWrapper reqObj)
         {
-            _logger.Log("Receive Request", reqObj, level);
+            _logger.Log($"Receive Request {typeof(TRequest).ToLogName()}", reqObj, level);
             var req = await SerializeUtil.DeserializeAsync<TRequest, RpcRequestWrapper>(reqObj);
             Debug.Assert(req != null, nameof(req) + " != null");
             var result = await handleFunc(req);
             result.RequestId = req.RequestId;
             result.Success = string.IsNullOrEmpty(result.Error);
             var rsp = await SerializeUtil.SerializeAsync<TResponse, RpcResultWrapper>(result, reqObj.CompressInResult);
-            _logger.Log("Reply with Response", rsp, level);
+            _logger.Log($"Reply with Response {typeof(TResponse).ToLogName()}", rsp, level);
             return rsp;
         }
 
