@@ -15,7 +15,7 @@ internal static class TypeExtension
     internal static string ToLogName(this Type type)
     {
         return type.GenericTypeArguments.Any()
-            ? $"{type.Name[..^2]}<{string.Join(',', type.GenericTypeArguments.Select(x => x.Name))})>"
+            ? $"{type.Name[..^2]}<{string.Join(',', type.GenericTypeArguments.Select(x => x.Name))}>"
             : type.Name;
     }
 }

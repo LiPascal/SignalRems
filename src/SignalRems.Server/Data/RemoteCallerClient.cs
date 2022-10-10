@@ -7,8 +7,6 @@ namespace SignalRems.Server.Data;
 
 internal class RemoteCallerClient
 {
-    public static ConcurrentDictionary<string, RemoteCallerClient> Clients { get; } = new();
-
     public RemoteCallerClient(string clientId)
     {
         ClientId = clientId;

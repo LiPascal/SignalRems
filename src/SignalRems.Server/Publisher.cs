@@ -30,13 +30,15 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     private readonly Dictionary<TKey, T> _cache = new();
     private readonly Func<T, TKey> _keyGetter;
     private readonly IHubContext<PubSubHub> _hubContext;
+    private readonly IClientCollection<SubscriptionClient> _clients;
     private readonly ConcurrentQueue<SubscriptionCommand> _pendingCommands = new();
     private bool _isDirty = false;
 
-    public Publisher(ILogger<Publisher<T, TKey>> logger, IHubContext<PubSubHub> hubContext, string topic)
+    public Publisher(ILogger<Publisher<T, TKey>> logger, IHubContext<PubSubHub> hubContext, IClientCollection<SubscriptionClient> clients,  string topic)
     {
         _logger = logger;
         _hubContext = hubContext;
+        _clients = clients;
         Topic = topic;
 
         var keyPropertyInfos = typeof(T).GetProperties()
@@ -216,7 +218,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
             return;
         }
 
-        if (needsSnapshot && SubscriptionClient.Clients[context.ClientId].IsConnected)
+        if (needsSnapshot && _clients[context.ClientId].IsConnected)
         {
             var snapshot = (filter == null ? _cache.Values : _cache.Values.Where(filter)).ToArray();
             try
@@ -232,7 +234,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 subscriptionCommand.CompleteSource.SetResult($"Get error when sending snapshot.{ex.GetFullMessage()}");
             }
         }
-        else if (keys != null && keys.Any() && SubscriptionClient.Clients[context.ClientId].IsConnected)
+        else if (keys != null && keys.Any() && _clients[context.ClientId].IsConnected)
         {
             if (!keys.All(x => x is TKey))
             {
@@ -332,7 +334,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 var contexts = _subscriptions.Values.Where(x => x.IsSubscribing);
                 foreach (var context in contexts)
                 {
-                    if (!SubscriptionClient.Clients[context.ClientId].IsConnected)
+                    if (!_clients[context.ClientId].IsConnected)
                     {
                         _subscriptions.Remove(context.SubscriptionId);
                         continue;

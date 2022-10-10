@@ -4,8 +4,6 @@ namespace SignalRems.Server.Data;
 
 internal class SubscriptionContext
 {
-    public static ConcurrentDictionary<string, SubscriptionContext> Subscriptions { get; } = new();
-
     public SubscriptionContext(string subscriptionId,string clientId, string topic)
     {
         SubscriptionId = subscriptionId;

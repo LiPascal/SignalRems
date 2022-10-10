@@ -4,6 +4,7 @@ using MessagePack.Formatters;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Interfaces;
+using SignalRems.Core.Models;
 using SignalRems.Core.Utils;
 using SignalRems.Server.Data;
 using SignalRems.Server.Hubs;
@@ -43,6 +44,9 @@ public static class WebApplicationExtensions
         service.AddSingleton<RpcService>();
         service.AddSingleton<IRpcService, RpcService>(provider => provider.GetService<RpcService>()!);
         service.AddSingleton<IRpcServer, RpcService>(provider => provider.GetService<RpcService>()!);
+        service.AddSingleton<IClientCollection<RemoteCallerClient>, ClientCollection<RemoteCallerClient>>();
+        service.AddSingleton<IClientCollection<SubscriptionClient>, ClientCollection<SubscriptionClient>>();
+        service.AddSingleton<IClientCollection<SubscriptionContext>, ClientCollection<SubscriptionContext>>();
         return service;
     }
 
