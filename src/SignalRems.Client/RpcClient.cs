@@ -25,7 +25,7 @@ internal class RpcClient : ClientBase, IRpcClient
         bool compressInRequest = false, bool compressInResult = false)
         where TRequest : class, IRpcRequest, new() where TResponse : class, IRpcResponse, new()
     {
-        if (Connection == null)
+        if (Connection is not { State: HubConnectionState.Connected })
         {
             return new TResponse { RequestId = request.RequestId, Success = false, Error = NotConnectedError };
         }
