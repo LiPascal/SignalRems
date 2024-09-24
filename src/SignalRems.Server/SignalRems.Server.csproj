@@ -7,9 +7,9 @@
 		<OutputType>Library</OutputType>
 		<Authors>Pascal Li</Authors>
 		<IsPackable>true</IsPackable>
-		<Version>1.0.15</Version>
-		<FileVersion>1.0.15</FileVersion>
-		<AssemblyVersion>1.0.15</AssemblyVersion>
+		<Version>1.0.16</Version>
+		<FileVersion>1.0.16</FileVersion>
+		<AssemblyVersion>1.0.16</AssemblyVersion>
 		<BaseOutputPath>..\..\build</BaseOutputPath>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
