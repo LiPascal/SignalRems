@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,10 +39,10 @@ public class PubsubTests
         var handler = new ModelHandler();
         var model = new Model
         {
-            Id = 5, 
+            Id = 5,
             Name = "ABC",
-            CreateTime = DateTime.Now, 
-            Marks = new List<double> { 3.14, 2.17, 0.03 }, 
+            CreateTime = DateTime.Now,
+            Marks = new List<double> { 3.14, 2.17, 0.03 },
             Status = Status.Done
         };
         var topic = "BasicPubsubTestTopic";
@@ -86,7 +87,7 @@ public class PubsubTests
         var handler2 = new ModelHandler();
         var client2 = TestEnvironment.ClientServiceProvider.GetService<ISubscriberClient>();
         await client2.ConnectAsync(TestEnvironment.ServerUrl, TestEnvironment.PubsubEndPoint, CancellationToken.None);
-        await client2.SubscribeAsync(topic, handler2, m => m.Name.StartsWith("A"));
+        await client2.SubscribeAsync(topic, handler2, m => m.Name.StartsWith('A'));
         DisposeActions.Push(() => client2.Dispose());
 
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
@@ -94,6 +95,33 @@ public class PubsubTests
 
         Assert.AreEqual(2, handler1.Models.Count);
         Assert.AreEqual(1, handler2.Models.Count);
+
+        model1.Name = "BBC";
+        publisher.Publish(model1);
+
+        await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
+        await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
+
+        Assert.AreEqual(2, handler1.Models.Count);
+        Assert.AreEqual(0, handler2.Models.Count);
+
+        model2.Name = "AYZ";
+        publisher.Publish(model2);
+
+        await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
+        await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 1, 2000);
+
+        Assert.AreEqual(2, handler1.Models.Count);
+        Assert.AreEqual(1, handler2.Models.Count);
+
+        model2.Name = "CYZ";
+        publisher.Publish(model2);
+
+        await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
+        await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
+
+        Assert.AreEqual(2, handler1.Models.Count);
+        Assert.AreEqual(0, handler2.Models.Count);
     }
 
 
@@ -210,7 +238,7 @@ public class PubsubTests
         await client.SubscribeWithKeysAsync(topic, handler, 7, 8);
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 3, 2000);
         Assert.AreEqual(3, handler.Models.Count);
-        
+
         await client.UnSubscribeWithKeysAsync(topic, handler, 5, 8);
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
         Assert.AreEqual(2, handler.Models.Count);

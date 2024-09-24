@@ -34,7 +34,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     private readonly ConcurrentQueue<SubscriptionCommand> _pendingCommands = new();
     private bool _isDirty = false;
 
-    public Publisher(ILogger<Publisher<T, TKey>> logger, IHubContext<PubSubHub> hubContext, IClientCollection<SubscriptionClient> clients,  string topic)
+    public Publisher(ILogger<Publisher<T, TKey>> logger, IHubContext<PubSubHub> hubContext, IClientCollection<SubscriptionClient> clients, string topic)
     {
         _logger = logger;
         _hubContext = hubContext;
@@ -223,6 +223,13 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
             var snapshot = (filter == null ? _cache.Values : _cache.Values.Where(filter)).ToArray();
             try
             {
+                if (filter != null && snapshot.Length > 0)
+                {
+                    foreach (var key in snapshot.Select(x => _keyGetter(x)))
+                    {
+                        subscriptionCommand.Context.FilteredKeys.Add(key.ToString()!);
+                    }
+                }
                 var client = _hubContext.Clients.Client(context.ClientId);
                 await client.SendAsync(Command.Snapshot, snapshot);
                 subscriptionCommand.CompleteSource.SetResult(null);
@@ -330,7 +337,6 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                     _cache[key] = entity;
                 }
 
-
                 var contexts = _subscriptions.Values.Where(x => x.IsSubscribing);
                 foreach (var context in contexts)
                 {
@@ -340,9 +346,22 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                         continue;
                     }
 
-                    if (context.Filter is Func<T, bool> filter && !filter(entity))
+                    if (context.Filter is Func<T, bool> filter)
                     {
-                        continue;
+                        var keyStr = key.ToString()!;
+                        if (filter(entity))
+                        {
+                            context.FilteredKeys.Add(keyStr!);
+                        }
+                        else if (context.FilteredKeys.Contains(keyStr))
+                        {
+                            isDelete = true;
+                            context.FilteredKeys.Remove(keyStr);
+                        }
+                        else
+                        {
+                            continue;
+                        }
                     }
 
                     if (context.Keys.Any() && !context.Keys.Any(x => Equals(x, key)))

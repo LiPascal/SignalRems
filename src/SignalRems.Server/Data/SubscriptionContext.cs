@@ -17,4 +17,5 @@ internal class SubscriptionContext
     public bool IsSubscribing { get; set; }
     public object? Filter { get; set; }
     public object[] Keys { get; set; } = Array.Empty<object>();
+    public HashSet<string> FilteredKeys { get; } = new();
 }
