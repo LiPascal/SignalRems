@@ -32,6 +32,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     private readonly IHubContext<PubSubHub> _hubContext;
     private readonly IClientCollection<SubscriptionClient> _clients;
     private readonly ConcurrentQueue<SubscriptionCommand> _pendingCommands = new();
+    private readonly object _bufferLock = new ();
     private bool _isDirty = false;
 
     public Publisher(ILogger<Publisher<T, TKey>> logger, IHubContext<PubSubHub> hubContext, IClientCollection<SubscriptionClient> clients, string topic)
@@ -69,7 +70,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
     public void Publish(T entity)
     {
-        lock (_buffer)
+        lock (_bufferLock)
         {
             _buffer.Add(entity);
         }
@@ -79,7 +80,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
     public void Publish(IEnumerable<T> entities)
     {
-        lock (_buffer)
+        lock (_bufferLock)
         {
             _buffer.AddRange(entities);
         }
@@ -89,13 +90,9 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
     public void Delete(T entity)
     {
-        lock (_deleteBuffer)
+        lock (_bufferLock)
         {
-            _deleteBuffer.Add(entity);
-        }
-
-        lock (_buffer)
-        {
+            _deleteBuffer.Add(entity);        
             _buffer.Add(entity);
         }
 
@@ -105,13 +102,10 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     public void Delete(IEnumerable<T> entities)
     {
         var array = entities.ToArray();
-        lock (_deleteBuffer)
+       
+        lock (_bufferLock)
         {
             _deleteBuffer.AddRange(array);
-        }
-
-        lock (_buffer)
-        {
             _buffer.AddRange(array);
         }
 
@@ -304,14 +298,10 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
         T[] buffer;
         T[] toDelete;
-        lock (_buffer)
+        lock (_bufferLock)
         {
             buffer = _buffer.ToArray();
-            _buffer.Clear();
-        }
-
-        lock (_deleteBuffer)
-        {
+            _buffer.Clear();       
             toDelete = _deleteBuffer.ToArray();
             _deleteBuffer.Clear();
         }
