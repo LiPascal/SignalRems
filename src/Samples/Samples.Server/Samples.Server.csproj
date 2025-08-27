@@ -5,9 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Pascal Li</Authors>
-    <Version>1.0.16</Version>
-    <FileVersion>1.0.16</FileVersion>
-    <AssemblyVersion>1.0.16</AssemblyVersion>
+    <Version>1.0.17</Version>
+    <FileVersion>1.0.17</FileVersion>
+    <AssemblyVersion>1.0.17</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
