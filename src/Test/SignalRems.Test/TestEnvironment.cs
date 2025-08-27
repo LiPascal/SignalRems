@@ -40,31 +40,38 @@ public class TestEnvironment
         Trace.Listeners.Add(new ConsoleTraceListener());
         Task.Run(async () =>
         {
-            var serverBuilder = WebApplication.CreateBuilder();
-            serverBuilder.Services.AddSignalRemsService(o=>
+            try
             {
-                o.MaximumReceiveMessageSize = 1024 * 128;
-            }, UseMessagePack, Status.Convertor);
-            var serverApp = serverBuilder.Build();
-            ServerServiceProvider = serverApp.Services;
-            serverApp.MapSignalRemsPublisherHub(PubsubEndPoint);
-            serverApp.MapSignalRemsRpcHub(RpcEndPoint);
-            serverApp.Lifetime.ApplicationStarted.Register(() =>
-            {
-                var publisherService = serverApp.Services.GetService<IPublisherService>();
-                publisherService.Start();
-                DisposeActions.Push(() => publisherService.Dispose());
-                if (Interlocked.Increment(ref ReadyCnt) == ExpectedReadyCnt)
+                var serverBuilder = WebApplication.CreateBuilder();
+                serverBuilder.Services.AddSignalRemsService(o =>
                 {
-                    EnvReady.SetResult();
-                }
-            });
-            DisposeActions.Push(() =>
-            {
-                serverApp.DisposeAsync();
-            });
+                    o.MaximumReceiveMessageSize = 1024 * 128;
+                }, UseMessagePack, Status.Convertor);
+                var serverApp = serverBuilder.Build();
+                ServerServiceProvider = serverApp.Services;
+                serverApp.MapSignalRemsPublisherHub(PubsubEndPoint);
+                serverApp.MapSignalRemsRpcHub(RpcEndPoint);
+                serverApp.Lifetime.ApplicationStarted.Register(() =>
+                {
+                    var publisherService = serverApp.Services.GetService<IPublisherService>();
+                    publisherService.Start();
+                    DisposeActions.Push(() => publisherService.Dispose());
+                    if (Interlocked.Increment(ref ReadyCnt) == ExpectedReadyCnt)
+                    {
+                        EnvReady.SetResult();
+                    }
+                });
+                DisposeActions.Push(async () =>
+                {
+                   await serverApp.DisposeAsync();
+                });
 
-            await serverApp.RunAsync(ServerUrl);
+                await serverApp.RunAsync(ServerUrl);
+            }
+            catch (Exception ex)
+            {
+               Debug.WriteLine(ex.ToString());
+            }
         });
 
         Task.Run(async () =>

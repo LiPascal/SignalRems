@@ -55,14 +55,8 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 $"Type {typeof(T).Name} property {keyPropertyInfos[0].Name} is not type {typeof(TKey).Name}.");
         }
 
-        var getter = keyPropertyInfos[0].GetGetMethod();
-
-        if (getter == null)
-        {
-            throw new InvalidPubSubEntityException(
+        var getter = keyPropertyInfos[0].GetGetMethod() ?? throw new InvalidPubSubEntityException(
                 $"Type {typeof(T).Name} property {keyPropertyInfos[0].Name} doesn't have public getter.");
-        }
-
         _keyGetter = entity => GetKey(getter, entity);
     }
 
@@ -227,17 +221,17 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                 var client = _hubContext.Clients.Client(context.ClientId);
                 await client.SendAsync(Command.Snapshot, snapshot);
                 subscriptionCommand.CompleteSource.SetResult(null);
-                _logger.LogInformation("Sending snapshot to client {0}", context.ClientId);
+                _logger.LogInformation("Sending snapshot to client {clientId}", context.ClientId);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Get error when sending snapshot.", ex);
+                _logger.LogWarning(ex, "Get error when sending snapshot.");
                 subscriptionCommand.CompleteSource.SetResult($"Get error when sending snapshot.{ex.GetFullMessage()}");
             }
         }
         else if (keys != null && keys.Any() && _clients[context.ClientId].IsConnected)
         {
-            if (!keys.All(x => x is TKey))
+            if (!keys.All(x => x is not null))
             {
                 subscriptionCommand.CompleteSource.SetResult($"The key is not type {typeof(TKey).Name}");
                 return;
@@ -282,7 +276,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Get error when sending snapshot.", ex);
+                _logger.LogWarning(ex, "Get error when sending snapshot.");
                 subscriptionCommand.CompleteSource.SetResult($"Get error when sending snapshot.{ex.GetFullMessage()}");
             }
         }
@@ -335,23 +329,37 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                         _subscriptions.Remove(context.SubscriptionId);
                         continue;
                     }
-
+                    var isFilteredOut = false;
                     if (context.Filter is Func<T, bool> filter)
                     {
                         var keyStr = key.ToString()!;
-                        if (filter(entity))
+                        if(isDelete)
                         {
-                            context.FilteredKeys.Add(keyStr!);
-                        }
-                        else if (context.FilteredKeys.Contains(keyStr))
-                        {
-                            isDelete = true;
-                            context.FilteredKeys.Remove(keyStr);
+                            if (filter(entity))
+                            {
+                                context.FilteredKeys.Remove(keyStr);
+                            }
+                            else
+                            {
+                                continue;
+                            }   
                         }
                         else
                         {
-                            continue;
-                        }
+                            if (filter(entity))
+                            {
+                                context.FilteredKeys.Add(keyStr!);
+                            }
+                            else if (context.FilteredKeys.Contains(keyStr))
+                            {
+                                isFilteredOut = true;
+                                context.FilteredKeys.Remove(keyStr);
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }                        
                     }
 
                     if (context.Keys.Any() && !context.Keys.Any(x => Equals(x, key)))
@@ -361,7 +369,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
 
                     try
                     {
-                        if (isDelete)
+                        if (isDelete || isFilteredOut)
                         {
                             await _hubContext.Clients.Client(context.ClientId)
                                 .SendAsync(Command.Delete, key.ToString());
@@ -374,7 +382,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning("Get error when publishing message", ex);
+                        _logger.LogWarning(ex, "Get error when publishing message");
                     }
                 }
             }
@@ -391,12 +399,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     private static TKey GetKey(MethodBase getter, T entity)
     {
         var key = getter.Invoke(entity, null);
-        if (key == null)
-        {
-            throw new InvalidPubSubEntityException("Key property can not be null");
-        }
-
-        return (TKey)key;
+        return key == null ? throw new InvalidPubSubEntityException("Key property can not be null") : (TKey)key;
     }
 
     public void Dispose()

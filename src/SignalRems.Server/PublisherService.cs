@@ -52,9 +52,9 @@ internal class PublisherService : IPublisherService
                 {
                     while (client.PendingCommands.TryDequeue(out var command))
                     {
-                        if (_publishers.ContainsKey(command.Context.Topic))
+                        if (_publishers.TryGetValue(command.Context.Topic, out IPublisherWorker? value))
                         {
-                            _publishers[command.Context.Topic].DispatchCommand(command);
+                            value.DispatchCommand(command);
                             _logger.LogInformation(
                                 "Dispatch command {command.CommandName} to topic {subscription.Topic}",
                                 command.CommandName, command.Context.Topic);
