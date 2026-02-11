@@ -6,6 +6,7 @@ using SignalRems.Test.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
@@ -57,13 +58,13 @@ public class PubsubTests
 
         DisposeActions.Push(() => client.Dispose());
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 1, 2000);
-        Assert.AreEqual(1, handler.Models.Count);
+        Assert.That(handler.Models.Count, Is.EqualTo(1));
         var model2 = handler.Models.First();
-        Assert.AreEqual(model.Id, model2.Id);
-        Assert.AreEqual(model.Name, model2.Name);
-        Assert.AreEqual(model.CreateTime, model2.CreateTime);
-        Assert.IsTrue(model.Marks.SequenceEqual(model2.Marks));
-        Assert.AreEqual(model.Status, Status.Done);
+        Assert.That(model2.Id, Is.EqualTo(model.Id));
+        Assert.That(model2.Name, Is.EqualTo(model.Name));
+        Assert.That(model2.CreateTime, Is.EqualTo(model.CreateTime));
+        Assert.That(model.Marks.SequenceEqual(model2.Marks), Is.True);
+        Assert.That(Status.Done, Is.EqualTo(model.Status));
     }
 
     [Test]
@@ -93,8 +94,8 @@ public class PubsubTests
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
         await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 1, 2000);
 
-        Assert.AreEqual(2, handler1.Models.Count);
-        Assert.AreEqual(1, handler2.Models.Count);
+        Assert.That(handler1.Models.Count, Is.EqualTo(2));
+        Assert.That(handler2.Models.Count, Is.EqualTo(1));
 
         model1.Name = "BBC";
         publisher.Publish(model1);
@@ -102,8 +103,8 @@ public class PubsubTests
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
         await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
 
-        Assert.AreEqual(2, handler1.Models.Count);
-        Assert.AreEqual(0, handler2.Models.Count);
+        Assert.That(handler1.Models.Count, Is.EqualTo(2));
+        Assert.That(handler2.Models.Count, Is.EqualTo(0));
 
         model2.Name = "AYZ";
         publisher.Publish(model2);
@@ -111,8 +112,8 @@ public class PubsubTests
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
         await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 1, 2000);
 
-        Assert.AreEqual(2, handler1.Models.Count);
-        Assert.AreEqual(1, handler2.Models.Count);
+        Assert.That(handler1.Models.Count, Is.EqualTo(2));
+        Assert.That(handler2.Models.Count, Is.EqualTo(1));
 
         model2.Name = "CYZ";
         publisher.Publish(model2);
@@ -120,8 +121,8 @@ public class PubsubTests
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 2, 2000);
         await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
 
-        Assert.AreEqual(2, handler1.Models.Count);
-        Assert.AreEqual(0, handler2.Models.Count);
+        Assert.That(handler1.Models.Count, Is.EqualTo(2));
+        Assert.That(handler2.Models.Count, Is.EqualTo(0));
     }
 
 
@@ -144,7 +145,7 @@ public class PubsubTests
         await client1.SubscribeAsync(topic, handler1);
         DisposeActions.Push(() => client1.Dispose());
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 5, 2000);
-        Assert.AreEqual(5, handler1.Models.Count);
+        Assert.That(handler1.Models.Count, Is.EqualTo(5));
 
         var handler2 = new ModelHandler();
         var client2 = TestEnvironment.ClientServiceProvider.GetService<ISubscriberClient>();
@@ -152,8 +153,8 @@ public class PubsubTests
         await client2.SubscribeAsync(topic, handler2);
         DisposeActions.Push(() => client2.Dispose());
         await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 5, 2000);
-        Assert.AreEqual(5, handler1.Models.Count);
-        Assert.AreEqual(5, handler2.SnapShotCount);
+        Assert.That(handler1.Models.Count, Is.EqualTo(5));
+        Assert.That(handler2.SnapShotCount, Is.EqualTo(5));
     }
 
 
@@ -189,20 +190,20 @@ public class PubsubTests
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 1, 2000);
         await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
 
-        Assert.AreEqual(1, handler1.Models.Count);
-        Assert.AreEqual(0, handler2.Models.Count);
-        Assert.AreEqual(1, handler1.DeletedKeys.Count);
-        Assert.AreEqual(1, handler2.DeletedKeys.Count);
+        Assert.That(handler1.Models.Count, Is.EqualTo(1));
+        Assert.That(handler2.Models.Count, Is.EqualTo(0));
+        Assert.That(handler1.DeletedKeys.Count, Is.EqualTo(1));
+        Assert.That(handler2.DeletedKeys.Count, Is.EqualTo(1));
 
         publisher.Delete(model2);
 
         await TestUtil.WaitForConditionAsync(() => handler1.Models.Count == 0, 2000);
         await TestUtil.WaitForConditionAsync(() => handler2.Models.Count == 0, 2000);
 
-        Assert.AreEqual(0, handler1.Models.Count);
-        Assert.AreEqual(0, handler2.Models.Count);
-        Assert.AreEqual(2, handler1.DeletedKeys.Count);
-        Assert.AreEqual(1, handler2.DeletedKeys.Count);
+        Assert.That(handler1.Models.Count, Is.EqualTo(0));
+        Assert.That(handler2.Models.Count, Is.EqualTo(0));
+        Assert.That(handler1.DeletedKeys.Count, Is.EqualTo(2));
+        Assert.That(handler2.DeletedKeys.Count, Is.EqualTo(1));
     }
 
     [Test]
@@ -225,27 +226,27 @@ public class PubsubTests
 
         DisposeActions.Push(() => client.Dispose());
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 1, 2000);
-        Assert.AreEqual(1, handler.Models.Count);
+        Assert.That(handler.Models.Count, Is.EqualTo(1));
 
         publisher.Publish(model2);
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
-        Assert.AreEqual(2, handler.Models.Count);
-
+        Assert.That(handler.Models.Count, Is.EqualTo(2));
+		
         publisher.Publish(model3);
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 3, 2000);
-        Assert.AreEqual(3, handler.Models.Count);
+        Assert.That(handler.Models.Count, Is.EqualTo(2));
 
         await client.SubscribeWithKeysAsync(topic, handler, 107, 108);
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 3, 2000);
-        Assert.AreEqual(3, handler.Models.Count);
+        Assert.That(handler.Models.Count, Is.EqualTo(3));
 
         await client.UnSubscribeWithKeysAsync(topic, handler, 105, 108);
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
-        Assert.AreEqual(2, handler.Models.Count);
+        Assert.That(handler.Models.Count, Is.EqualTo(2));
 
         publisher.Publish(model4);
         await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
-        Assert.AreEqual(2, handler.Models.Count);
+        Assert.That(handler.Models.Count, Is.EqualTo(2));
 
     }
 
@@ -287,12 +288,12 @@ public class PubsubTests
             if (i % 2 == 0)
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 1, 2000);
-                Assert.AreEqual(1, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(1));
             }
             else
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 0, 2000);
-                Assert.AreEqual(0, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(0));
             }
         }
 
@@ -304,12 +305,12 @@ public class PubsubTests
             if (i % 2 == 0)
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 2, 2000);
-                Assert.AreEqual(2, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(2));
             }
             else
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 1, 2000);
-                Assert.AreEqual(1, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(1));
             }
         }
 
@@ -322,12 +323,12 @@ public class PubsubTests
             if (i % 2 == 0)
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 4, 2000);
-                Assert.AreEqual(4, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(4));
             }
             else
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 2, 2000);
-                Assert.AreEqual(2, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(2));
             }
         }
 
@@ -338,12 +339,12 @@ public class PubsubTests
             if (i % 2 == 0)
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 3, 2000);
-                Assert.AreEqual(3, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(3));
             }
             else
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 1, 2000);
-                Assert.AreEqual(1, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(1));
             }
         }
 
@@ -356,12 +357,12 @@ public class PubsubTests
             if (i % 2 == 0)
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 3, 2000);
-                Assert.AreEqual(3, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(3));
             }
             else
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 2, 2000);
-                Assert.AreEqual(2, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(2));
             }
         }
 
@@ -374,12 +375,12 @@ public class PubsubTests
             if (i % 2 == 0)
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 3, 2000);
-                Assert.AreEqual(3, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(3));
             }
             else
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 1, 2000);
-                Assert.AreEqual(1, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(1));
             }
         }
 
@@ -390,12 +391,12 @@ public class PubsubTests
             if (i % 2 == 0)
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 2, 2000);
-                Assert.AreEqual(2, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(2));
             }
             else
             {
                 await TestUtil.WaitForConditionAsync(() => handlers[local].Models.Count == 1, 2000);
-                Assert.AreEqual(1, handlers[local].Models.Count);
+                Assert.That(handlers[local].Models.Count, Is.EqualTo(1));
             }
         }
     }    

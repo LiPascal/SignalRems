@@ -17,7 +17,7 @@ namespace SignalRems.Test.Utils
                 timeout -= 10;
                 await Task.Delay(10);
             }
-
+            Console.WriteLine("Wait timeout");
             return false;
         }
     }

@@ -46,10 +46,10 @@ public class RequestResponseTest
         await rpcClient.ConnectionCompleteTask;
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done});
         Assert.That(result, Is.Not.Null);
-        Assert.IsTrue(result.Success);
-        Assert.AreEqual("Test1", result.RequestId);
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.RequestId, Is.EqualTo("Test1"));
         Assert.That(result.Error, Is.Null);
-        Assert.AreEqual(Status.Done, result.Status);
+        Assert.That(result.Status, Is.EqualTo(Status.Done));
     }
 
     [Test]
@@ -65,9 +65,9 @@ public class RequestResponseTest
         await rpcClient.ConnectionCompleteTask;
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1" });
         Assert.That(result, Is.Not.Null);
-        Assert.IsFalse(result.Success);
-        Assert.AreEqual("Test1", result.RequestId);
-        Assert.IsTrue(result.Error.StartsWith("Exception:\n Error in Test"));
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.RequestId, Is.EqualTo("Test1"));
+        Assert.That(result.Error.StartsWith("Exception:\n Error in Test"), Is.True);
     }
 
     [Test]
@@ -109,22 +109,22 @@ public class RequestResponseTest
         var delay3000 = Task.Delay(3000);
         var firstTask = await Task.WhenAny(responses1.Concat(responses2).ToArray());
         // The second client's task is quicker, should return early. 
-        Assert.IsTrue(responses2.Contains(firstTask));
+        Assert.That(responses2.Contains(firstTask), Is.True);
         // The second client's first task should complete within 200 ms. 
-        Assert.IsFalse(delay200.IsCompleted);
+        Assert.That(delay200.IsCompleted, Is.False);
         await Task.WhenAll(responses2.ToArray());
         // The second client's all tasks should complete within 500 ms. 
-        Assert.IsFalse(delay500.IsCompleted);
+        Assert.That(delay500.IsCompleted, Is.False);
         await Task.WhenAny(responses1.ToArray());
         // The first client's first task should complete within 1000 ms. 
-        Assert.IsFalse(delay1000.IsCompleted);
+        Assert.That(delay1000.IsCompleted, Is.False);
         // but not all tasks are completed; 
-        Assert.IsFalse(responses1.All(x => x.IsCompleted));
+        Assert.That(responses1.All(x => x.IsCompleted), Is.False);
         await Task.WhenAll(responses1.ToArray());
         // The first client's tasks should use more than 500 ms. 
-        Assert.IsTrue(delay500.IsCompleted);
+        Assert.That(delay500.IsCompleted, Is.True);
         // The first client's tasks should complete within 1000 ms. 
-        Assert.IsFalse(delay1000.IsCompleted);
+        Assert.That(delay1000.IsCompleted, Is.False);
         await delay3000;
     }
 
@@ -141,10 +141,10 @@ public class RequestResponseTest
         await rpcClient.ConnectionCompleteTask;
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compressInRequest:true);
         Assert.That(result, Is.Not.Null);
-        Assert.IsTrue(result.Success);
-        Assert.AreEqual("Test1", result.RequestId);
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.RequestId, Is.EqualTo("Test1"));
         Assert.That(result.Error, Is.Null);
-        Assert.AreEqual(Status.Done, result.Status);
+        Assert.That(result.Status, Is.EqualTo(Status.Done));
     }
     [Test]
     public async Task CompressInResponseRpcTest()
@@ -161,9 +161,9 @@ public class RequestResponseTest
         var result = await rpcClient.SendAsync<TestRequest, TestResponse>(new TestRequest() { RequestId = "Test1", Status = Status.Done }, compressInResult: true);
         Assert.That(result, Is.Not.Null);
         
-        Assert.IsTrue(result.Success);
-        Assert.AreEqual("Test1", result.RequestId);
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.RequestId, Is.EqualTo("Test1"));
         Assert.That(result.Error, Is.Null);
-        Assert.AreEqual(Status.Done, result.Status);
+        Assert.That(result.Status, Is.EqualTo(Status.Done));
     }
 }

@@ -28,7 +28,7 @@ namespace SignalRems.Test.Data
 
         public class StatusJsonConvertor : JsonConverter<Status>
         {
-            public override Status? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            public override Status Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
                 switch (reader.GetInt16())
                 {

@@ -17,7 +17,7 @@ public class ModelHandler : ISubscriptionHandler<Model>
 
     public void OnMessageReceived(Model message)
     {
-        Debug.WriteLine($"OnMessageReceived");
+        Debug.WriteLine($"OnMessageReceived: {message.Id}");
         _models[message.Id] = message;
     }
 
