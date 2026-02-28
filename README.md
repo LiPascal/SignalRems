@@ -75,7 +75,8 @@ var subscription = await _subscriberClient.SubscribeAsync("Message", _personHand
 // Or, subscribe people with given Id 1, 2, 3, as one client can only make one subscription, this example shows in comment. 
 // var subscriptionByKeys = await _subscriberClient.SubscribeWithKeysAsync("Message", _personHandler, 1, 2, 3);
 ```
-Please note, one client can only be used to do one subscription. The dispose method will stop the subscription and disconnect from server. We can get multiple client instances from DI container to subscribe with differnet topic/filter. 
+Please note, if using subscription without keys, one client can only be used to do one subscription. The dispose method will stop the subscription and disconnect from server. We can get multiple client instances from DI container to subscribe with differnet topic/filter. 
+If using subscription by keys mode, the client can be used to subscribe/unsubscribe by keys multiple times, but it can't subscribe without given keys. 
 ## License
 This project is open source and follows MIT license. 
 
