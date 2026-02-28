@@ -24,6 +24,9 @@ public class Worker : BackgroundService
         await _rpcClient.ConnectAsync("https://localhost:7198", "/signalr/ems/example/rpc", stoppingToken);
 
         var subscription = await _subscriberClient.SubscribeAsync("Message", _personHandler, p=> p.Age > 60);
+
+        // Subscribe people with given Id 1, 2, 3, as one client can only make one subscription, this example shows in comment. 
+        // var subscriptionByKeys = await _subscriberClient.SubscribeWithKeysAsync("Message", _personHandler, 1, 2, 3);
         int i = 0;
         while (!stoppingToken.IsCancellationRequested)
         {

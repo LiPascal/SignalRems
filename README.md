@@ -4,14 +4,18 @@ SignalRems is one Enterprise Messaging System (EMS) implemented by .NET Standard
 It is using Newtonsoft.json or MessagePack for serialization/deserialization. 
 In PUB/SUB mode, it subscribes with filter of Lambda expression. 
 ## Dependency
-This libiary is built on [SingalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr), hence the server application must be using "Microsoft.NET.Sdk.Web" SDK. The client side could use any .net 6.0 SDK. 
+This libiary is built on [SingalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr), hence the server application must be using "Microsoft.NET.Sdk.Web" SDK. The client side could use any .net SDK. 
+Currently this project runs under dotnet core 8.0 and above. 
 ## API usage
 ### RPC Server
 1. Configure WebApplication builder; 
 ``` C#
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSignalRemsService(); // Using Json serialization/deserialization
-// builder.Services.AddSignalRemsService(true); // MessagePack serialization/deserialization
+// Using Json serialization/deserialization
+builder.Services.AddSignalRemsService(); 
+
+// Or, using MessagePack serialization/deserialization
+// builder.Services.AddSignalRemsService(true); 
 ```
 2. Setup endpoint for app instance:
 ``` C#
@@ -65,7 +69,11 @@ services.AddSignalRemsClient();
 ``` C#
 ISubscriptionHandler<Person> handler;
 await _subscriberClient.ConnectAsync("https://localhost:7198", "/signalr/ems/example/pubsub", stoppingToken);
-var subscription = await _subscriberClient.SubscribeAsync("Message", handler, p=> p.Age > 60);
+// Subscribe people whose age is over 60.
+var subscription = await _subscriberClient.SubscribeAsync("Message", _personHandler, p=> p.Age > 60);
+
+// Or, subscribe people with given Id 1, 2, 3, as one client can only make one subscription, this example shows in comment. 
+// var subscriptionByKeys = await _subscriberClient.SubscribeWithKeysAsync("Message", _personHandler, 1, 2, 3);
 ```
 Please note, one client can only be used to do one subscription. The dispose method will stop the subscription and disconnect from server. We can get multiple client instances from DI container to subscribe with differnet topic/filter. 
 ## License
