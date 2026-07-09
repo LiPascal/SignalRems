@@ -15,6 +15,8 @@ internal class RpcWrapperBase : IRpcMessageWrapper
 
     [Key(1)]
     public bool UsingCompress { get; set; }
+    [Key(2)]
+    public long CorrelationId { get ; set ; }
 
     public byte[]? GetPayload()
     {

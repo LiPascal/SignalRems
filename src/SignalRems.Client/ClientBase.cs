@@ -46,9 +46,10 @@ public abstract class ClientBase : IClient
             }
         });
         Connection = builder.Build();
+        OnConnectionCreated(Connection);
         Connection.Reconnecting += ConnectionOnReconnecting;
         Connection.Reconnected += ConnectionOnReconnected;
-        Connection.Closed += ConnectionOnClosed;
+        Connection.Closed += ConnectionOnClosed;        
         var retryAfter = 1;
         Task.Run(async () =>
         {
@@ -106,6 +107,11 @@ public abstract class ClientBase : IClient
     protected string? Url { get; private set; }
 
     protected ILogger Logger { get; }
+
+    protected virtual void OnConnectionCreated(HubConnection connection)
+    {
+
+    }
 
     protected virtual Task ConnectionOnReconnected(string? newId)
     {

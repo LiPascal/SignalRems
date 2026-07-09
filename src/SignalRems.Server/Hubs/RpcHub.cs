@@ -50,15 +50,16 @@ internal class RpcHub : Hub
         Task.Run(async () =>
         {
             var result = await _rpcServer.ProcessAsync(request, requestType, responseType);
+            result.CorrelationId = request.CorrelationId;
             if (_clients.TryGetValue(id, out var caller) && caller!.IsConnected)
             {
                 var client = _hubContext.Clients.Client(id);
-                _logger.LogDebug("Reply message on topic {0}", request.ReplyOnTopic);
-                await client.SendAsync(request.ReplyOnTopic, result);
+                _logger.LogDebug("Reply message on CorrelationId {0} for connection {1}", result.CorrelationId, client);
+                await client.SendAsync(Command.ReplyTopic, result);
             }
             else
             {
-                _logger.LogWarning("client disconnected, discard result for on topic {0}", request.ReplyOnTopic);
+                _logger.LogWarning("client disconnected, discard result for on CorrelationId {0}, connection id is {1}", result.CorrelationId, id);
             }
         });
     }

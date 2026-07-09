@@ -106,6 +106,7 @@ public class RequestResponseTest
         var delay200 = Task.Delay(200);
         var delay500 = Task.Delay(500);
         var delay1000 = Task.Delay(1000);
+        var delay2000 = Task.Delay(2000);
         var delay3000 = Task.Delay(3000);
         var firstTask = await Task.WhenAny(responses1.Concat(responses2).ToArray());
         // The second client's task is quicker, should return early. 
@@ -123,8 +124,8 @@ public class RequestResponseTest
         await Task.WhenAll(responses1.ToArray());
         // The first client's tasks should use more than 500 ms. 
         Assert.That(delay500.IsCompleted, Is.True);
-        // The first client's tasks should complete within 1000 ms. 
-        Assert.That(delay1000.IsCompleted, Is.False);
+        // The first client's tasks should complete within 2000 ms, 4 tasks run in 600ms, and last one continues in following 600ms;
+        Assert.That(delay2000.IsCompleted, Is.False);
         await delay3000;
     }
 

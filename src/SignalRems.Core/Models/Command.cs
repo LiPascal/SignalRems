@@ -17,6 +17,7 @@
         public const string RemoveSubscriptionKeys = "RemoveSubscriptionKeys";
 
         public const string Send = "Send";
+        public const string ReplyTopic = "ReplyTopic";
 
     }
 }

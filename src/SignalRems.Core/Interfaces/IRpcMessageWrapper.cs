@@ -12,6 +12,7 @@ namespace SignalRems.Core.Interfaces;
 
 internal interface IRpcMessageWrapper
 {
+    long CorrelationId { get; set; }
     byte[] Payload { get; set; }
 
     bool UsingCompress { get; set; }

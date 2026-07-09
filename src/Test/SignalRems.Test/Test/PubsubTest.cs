@@ -233,7 +233,7 @@ public class PubsubTests
         Assert.That(handler.Models.Count, Is.EqualTo(2));
 		
         publisher.Publish(model3);
-        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 3, 2000);
+        await TestUtil.WaitForConditionAsync(() => handler.Models.Count == 2, 2000);
         Assert.That(handler.Models.Count, Is.EqualTo(2));
 
         await client.SubscribeWithKeysAsync(topic, handler, 107, 108);

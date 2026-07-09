@@ -78,7 +78,7 @@ public class TestEnvironment
         {
             var clientBuilder = Host.CreateDefaultBuilder().ConfigureServices(services =>
             {
-                services.AddSignalRemsClient(UseMessagePack, Status.Convertor);
+                services.AddSignalRemsClient(UseMessagePack, 4, Status.Convertor);
             });
             var clientApp = clientBuilder.Build();
 
