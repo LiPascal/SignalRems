@@ -160,7 +160,7 @@ public abstract class ClientBase : IClient
 
         if (ConnectionStatus == ConnectionStatus.Connected)
         {
-            Interlocked.Exchange(ref _connectionCompletionSource, new TaskCompletionSource());
+            Interlocked.Exchange(ref _connectionCompletionSource, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
         }
         var handler = ConnectionStatusChanged;
         ConnectionStatus = status;

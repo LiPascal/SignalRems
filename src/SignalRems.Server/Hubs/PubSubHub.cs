@@ -58,7 +58,7 @@ internal class PubSubHub : Hub
             return "The subscription has started already";
         }
 
-        var tcs = new TaskCompletionSource<string?>();
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptionClients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.GetSnapshotAndSubscribe, tcs, filterJson));
         return await tcs.Task;
@@ -68,7 +68,7 @@ internal class PubSubHub : Hub
     public async Task<string?> GetSnapshot(string subscriptionId, string topic, string filterJson)
     {
         var clientSubscriptionContext = GetClientSubscriptionContext(subscriptionId, Context.ConnectionId, topic);
-        var tcs = new TaskCompletionSource<string?>();
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptionClients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.GetSnapshot, tcs, filterJson));
         return await tcs.Task;
@@ -83,7 +83,7 @@ internal class PubSubHub : Hub
             return "The subscription has started already";
         }
 
-        var tcs = new TaskCompletionSource<string?>();
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptionClients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.Subscribe, tcs, filterJson));
         return await tcs.Task;
@@ -96,7 +96,7 @@ internal class PubSubHub : Hub
         {
             return "The subscription has started already";
         }
-        var tcs = new TaskCompletionSource<string?>();
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptionClients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.SubscribeWithKeys, tcs, keys));
         return await tcs.Task;
@@ -113,7 +113,7 @@ internal class PubSubHub : Hub
         {
             return "The subscription has not started.";
         }
-        var tcs = new TaskCompletionSource<string?>();
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptionClients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.AddSubscriptionKeys, tcs, keys));
         return await tcs.Task;
@@ -130,7 +130,7 @@ internal class PubSubHub : Hub
         {
             return "The subscription has not started.";
         }
-        var tcs = new TaskCompletionSource<string?>();
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptionClients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.RemoveSubscriptionKeys, tcs, keys));
         return await tcs.Task;
@@ -144,7 +144,7 @@ internal class PubSubHub : Hub
             return "Invalid action, the subscription is not running";
         }
 
-        var tcs = new TaskCompletionSource<string?>();
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptionClients[Context.ConnectionId].PendingCommands.Enqueue(new SubscriptionCommand(clientSubscriptionContext,
             Command.UnSubscribe, tcs));
         return await tcs.Task;
