@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Reflection;
 using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Attributes;
@@ -32,7 +31,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     private readonly IHubContext<PubSubHub> _hubContext;
     private readonly IClientCollection<SubscriptionClient> _clients;
     private readonly ConcurrentQueue<SubscriptionCommand> _pendingCommands = new();
-    private readonly object _bufferLock = new ();
+    private readonly object _bufferLock = new();
     private bool _isDirty = false;
 
     public Publisher(ILogger<Publisher<T, TKey>> logger, IHubContext<PubSubHub> hubContext, IClientCollection<SubscriptionClient> clients, string topic)
@@ -67,7 +66,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         lock (_bufferLock)
         {
             _buffer.Add(entity);
-        }
+        }        
 
         _isDirty = true;
     }
@@ -86,7 +85,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     {
         lock (_bufferLock)
         {
-            _deleteBuffer.Add(entity);        
+            _deleteBuffer.Add(entity);
             _buffer.Add(entity);
         }
 
@@ -96,7 +95,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
     public void Delete(IEnumerable<T> entities)
     {
         var array = entities.ToArray();
-       
+
         lock (_bufferLock)
         {
             _deleteBuffer.AddRange(array);
@@ -185,12 +184,12 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                     context.IsSubscribing = true;
                     filter = FilterUtil.ToFilter<T>(subscriptionCommand.Parameters[0] as string);
                     break;
-                case Command.SubscribeWithKeys:
+                case Command.SubscribeWithKeys:                    
                     context.IsSubscribing = true;
                     keys = KeyWrapper<TKey>.FromJson(subscriptionCommand.Parameters[0] as string)?.Keys;
                     break;
                 case Command.AddSubscriptionKeys:
-                case Command.RemoveSubscriptionKeys:
+                case Command.RemoveSubscriptionKeys:                    
                     keys = KeyWrapper<TKey>.FromJson(subscriptionCommand.Parameters[0] as string)?.Keys;
                     break;
                 default:
@@ -260,15 +259,19 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                             {
                                 await client.SendAsync(Command.Publish, element);
                             }
-
-                            context.Keys = context.Keys.OfType<TKey>().Concat(keys).Distinct()
-                                .OfType<object>().ToArray();
                         }
                         else
                         {
-                            await client.SendAsync(Command.Snapshot, elements);
-                            context.Keys = keys.OfType<object>().ToArray();
+                            await client.SendAsync(Command.Snapshot, elements);                            
                         }
+                    }
+                    if (subscriptionCommand.CommandName == Command.AddSubscriptionKeys)
+                    {
+                        context.Keys = context.Keys.OfType<TKey>().Concat(keys).Distinct().OfType<object>().ToArray();                        
+                    }
+                    else
+                    {
+                        context.Keys = keys.OfType<object>().ToArray();
                     }
                 }
 
@@ -295,7 +298,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         lock (_bufferLock)
         {
             buffer = _buffer.ToArray();
-            _buffer.Clear();       
+            _buffer.Clear();
             toDelete = _deleteBuffer.ToArray();
             _deleteBuffer.Clear();
         }
@@ -303,7 +306,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
         if (buffer.Any())
         {
             foreach (var entity in buffer)
-            {
+            {                
                 var key = _keyGetter(entity);
                 var isDelete = false;
                 if (toDelete.Contains(entity))
@@ -333,7 +336,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                     if (context.Filter is Func<T, bool> filter)
                     {
                         var keyStr = key.ToString()!;
-                        if(isDelete)
+                        if (isDelete)
                         {
                             if (filter(entity))
                             {
@@ -342,7 +345,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                             else
                             {
                                 continue;
-                            }   
+                            }
                         }
                         else
                         {
@@ -359,7 +362,7 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                             {
                                 continue;
                             }
-                        }                        
+                        }
                     }
 
                     if (context.Keys.Any() && !context.Keys.Any(x => Equals(x, key)))
@@ -370,12 +373,12 @@ internal class Publisher<T, TKey> : IPublisher<T>, IPublisherWorker where T : cl
                     try
                     {
                         if (isDelete || isFilteredOut)
-                        {
+                        {                            
                             await _hubContext.Clients.Client(context.ClientId)
                                 .SendAsync(Command.Delete, key.ToString());
                         }
                         else
-                        {
+                        {                         
                             await _hubContext.Clients.Client(context.ClientId)
                                 .SendAsync(Command.Publish, entity);
                         }

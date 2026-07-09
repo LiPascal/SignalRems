@@ -37,7 +37,7 @@ internal class SubscriptionByKeys<T, TKey> : SubscriptionBase<T>, ISubscriptionB
 
     public async Task<string?> AddKeysAsync(params TKey[] keys)
     {
-        Logger.LogInformation("Adding keys to subscription {0} by keys {1}", SubscriptionId, string.Join(";", _keys));
+        Logger.LogInformation("Adding keys to subscription {0} by keys {1}", SubscriptionId, string.Join(";", keys));
         TKey[] newKeys;
         lock (_keys)
         {
