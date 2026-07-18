@@ -43,9 +43,9 @@ internal class RpcClient : ClientBase, IRpcClient
         {
             if(_maxParallelTaskCount > 0)
             {
-                if (_flowControlSemphore.CurrentCount == _maxParallelTaskCount)
+                if (_flowControlSemphore.CurrentCount == 0)
                 {
-                    Logger.LogWarning($"Max parallel task count reached, this call may be queued for a while, req id = {0}", request.RequestId);
+                    Logger.LogWarning("Max parallel task count reached, this call may be queued for a while, req id = {0}", request.RequestId);
                 }
                 await _flowControlSemphore.WaitAsync();
             }            
