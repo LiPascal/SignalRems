@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MessagePack.Resolvers;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,13 +37,20 @@ public abstract class ClientBase : IClient
         var builder = new HubConnectionBuilder()
             .WithUrl(Url)
             .WithAutomaticReconnect(new RetryPolicy(Logger, Url));
-        builder = builder.AddJsonProtocol(config =>
+        if (SerializeUtil.UseMessagePack)
         {
-            foreach (var converter in SerializeUtil.Converters)
+            builder = builder.AddMessagePackProtocol(o => o.SerializerOptions = SerializeUtil.ApplyToHubProtocol(o.SerializerOptions));
+        }
+        else
+        {
+            builder = builder.AddJsonProtocol(config =>
             {
-                config.PayloadSerializerOptions.Converters.Add(converter);
-            }
-        });
+                foreach (var converter in SerializeUtil.Converters)
+                {
+                    config.PayloadSerializerOptions.Converters.Add(converter);
+                }
+            });
+        }
         Connection = builder.Build();
         OnConnectionCreated(Connection);
         Connection.Reconnecting += ConnectionOnReconnecting;

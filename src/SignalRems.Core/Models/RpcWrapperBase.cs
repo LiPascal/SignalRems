@@ -5,9 +5,13 @@ using SignalRems.Core.Interfaces;
 
 namespace SignalRems.Core.Models;
 
+[MessagePackObject]
 internal class RpcWrapperBase : IRpcMessageWrapper
 {
+    [IgnoreMember]
     private byte[]? _unCompressedPayload;
+
+    [IgnoreMember]
     private string? _payloadText;
 
     [Key(0)]
