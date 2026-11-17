@@ -11,5 +11,7 @@ namespace SignalRems.Test.Data
         public int ProcessTime { get; set; }
 
         public Status Status { get; set; }
+
+        public bool PossibleResend { get; set; }
     }
 }

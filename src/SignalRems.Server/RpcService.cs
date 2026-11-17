@@ -40,6 +40,7 @@ internal sealed class RpcService : IRpcService, IRpcServer
             _logger.Log($"Receive Request {typeof(TRequest).ToLogName()}", reqObj, level);
             var req = await SerializeUtil.DeserializeAsync<TRequest, RpcRequestWrapper>(reqObj);
             Debug.Assert(req != null, nameof(req) + " != null");
+            req!.PossibleResend = reqObj.PossibleResend;
             var result = await handleFunc(req);
             result.RequestId = req.RequestId;
             result.Success = string.IsNullOrEmpty(result.Error);

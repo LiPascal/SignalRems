@@ -40,6 +40,24 @@ await _rpcClient.ConnectAsync("https://localhost:7198", "/signalr/ems/example/rp
 var request = new GetUserNameRequest() { UserId = i.ToString() };
 var response = await _rpcClient.SendAsync<GetUserNameRequest, GetUserNameResponse>(request);
 ```
+3. Connection loss and automatic retry
+Replies are routed back to the connection that sent the request, so a request still waiting for its response when the connection drops can no longer be answered. By default the client sends such a request again automatically once it is connected again, and the caller only observes the eventual response. Each resend is logged as a warning: `Connection lost before the response of request ... arrived ... the request will be resent after reconnecting` followed by `Resending request ... (attempt N)`.
+
+Retrying is transparent for the caller, and the server handler is told when a delivery may be a duplicate: a resent request carries `PossibleResend = true`. Request types opt in to the flag by declaring the optional `IRpcRequest.PossibleResend` property, which the server sets before `HandleRequest` runs (types that don't declare it are unaffected):
+``` C#
+public class CreateOrderRequest : IRpcRequest
+{
+    public string RequestId { get; set; }
+    // Set by the server on resends, no need to initialize it on the client.
+    public bool PossibleResend { get; set; }
+}
+```
+The client cannot know whether the handler already ran before the connection dropped, so the flag means "may be a duplicate". Handlers that are not idempotent should check it (for example return the existing result by `RequestId`) — note that this also covers the case where the server itself restarted. Callers that would rather fail than repeat a call can turn the retry off:
+``` C#
+// Returns immediately with Success = false, Error = "Connection was lost before the response was received"
+var response = await _rpcClient.SendAsync<GetUserNameRequest, GetUserNameResponse>(request, autoRetry: false);
+```
+The client also reconnects on its own when the server closes or restarts the connection (exponential backoff, capped at 60 seconds). A call that is started while the client is disconnected still fails immediately with `Server is not connected`; only a request that was already sent is waited for and resent.
 ### PUB/SUB Server
 1. Configure WebApplication builder; 
 ``` C#
