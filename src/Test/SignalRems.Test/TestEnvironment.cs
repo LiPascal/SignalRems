@@ -43,10 +43,20 @@ public class TestEnvironment
             try
             {
                 var serverBuilder = WebApplication.CreateBuilder();
-                serverBuilder.Services.AddSignalRemsService(o =>
+                if (UseMessagePack)
                 {
-                    o.MaximumReceiveMessageSize = 1024 * 128;
-                }, UseMessagePack, Status.Convertor);
+                    serverBuilder.Services.AddSignalRemsMessagePackService(o =>
+                    {
+                        o.MaximumReceiveMessageSize = 1024 * 128;
+                    });
+                }
+                else
+                {
+                    serverBuilder.Services.AddSignalRemsJsonService(o =>
+                    {
+                        o.MaximumReceiveMessageSize = 1024 * 128;
+                    }, Status.Convertor);
+                }
                 var serverApp = serverBuilder.Build();
                 ServerServiceProvider = serverApp.Services;
                 serverApp.MapSignalRemsPublisherHub(PubsubEndPoint);
@@ -78,7 +88,14 @@ public class TestEnvironment
         {
             var clientBuilder = Host.CreateDefaultBuilder().ConfigureServices(services =>
             {
-                services.AddSignalRemsClient(UseMessagePack, 4, Status.Convertor);
+                if (UseMessagePack)
+                {
+                    services.AddSignalRemsMessagePackClient(4);
+                }
+                else
+                {
+                    services.AddSignalRemsJsonClient(4, Status.Convertor);
+                }
             });
             var clientApp = clientBuilder.Build();
 

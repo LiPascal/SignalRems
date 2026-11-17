@@ -50,7 +50,6 @@ namespace SignalRems.Test.Data
             {
                 var ch = value?.Id ?? '\0';
                 options.Resolver.GetFormatterWithVerify<char>().Serialize(ref writer, ch, options);
-                writer.Write(ch);
             }
 
             public Status Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)

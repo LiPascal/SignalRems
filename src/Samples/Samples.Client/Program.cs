@@ -7,7 +7,7 @@ IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
         services.AddHostedService<Worker>();
-        services.AddSignalRemsClient();
+        services.AddSignalRemsJsonClient();
         services.AddTransient<ISubscriptionHandler<Person>, PersonManager>();
     })
     .Build();

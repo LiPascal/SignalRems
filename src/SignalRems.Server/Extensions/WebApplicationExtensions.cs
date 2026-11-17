@@ -1,6 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 using MessagePack;
-using MessagePack.Formatters;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.SignalR;
 using SignalRems.Core.Interfaces;
@@ -14,17 +13,34 @@ namespace SignalRems.Server.Extensions;
 
 public static class WebApplicationExtensions
 {
-    public static IServiceCollection AddSignalRemsService(this IServiceCollection service, Action<HubOptions>? configHub = null,  bool useMessagePack = false,
+    /// <summary>
+    /// Registers the SignalRems server using System.Text.Json serialization.
+    /// </summary>
+    public static IServiceCollection AddSignalRemsJsonService(this IServiceCollection service, Action<HubOptions>? configHub = null,
         params JsonConverter[] converters)
+        => service.AddSignalRemsServiceCore(configHub, useMessagePack: false, messagePackResolver: null, converters);
+
+    /// <summary>
+    /// Registers the SignalRems server using MessagePack serialization. Pass one or more
+    /// <paramref name="messagePackResolvers"/> to customize serialization; when none are supplied a contractless
+    /// resolver is used (matching System.Text.Json behavior for plain POCOs).
+    /// </summary>
+    public static IServiceCollection AddSignalRemsMessagePackService(this IServiceCollection service, Action<HubOptions>? configHub = null,
+        params IFormatterResolver[] messagePackResolvers)
+        => service.AddSignalRemsServiceCore(configHub, useMessagePack: true, CombineResolvers(messagePackResolvers), Array.Empty<JsonConverter>());
+
+    private static IServiceCollection AddSignalRemsServiceCore(this IServiceCollection service, Action<HubOptions>? configHub, bool useMessagePack,
+        IFormatterResolver? messagePackResolver, params JsonConverter[] converters)
     {
         SerializeUtil.UseMessagePack = useMessagePack;
         SerializeUtil.Converters = converters;
+        SerializeUtil.ConfigureMessagePack(messagePackResolver);
         if (useMessagePack)
         {
             service.AddSignalR(o =>
             {
                 configHub?.Invoke(o);
-            }).AddMessagePackProtocol();
+            }).AddMessagePackProtocol(o => o.SerializerOptions = SerializeUtil.ApplyToHubProtocol(o.SerializerOptions));
         }
         else
         {
@@ -49,6 +65,13 @@ public static class WebApplicationExtensions
         service.AddSingleton<IClientCollection<SubscriptionContext>, ClientCollection<SubscriptionContext>>();
         return service;
     }
+
+    private static IFormatterResolver? CombineResolvers(IFormatterResolver[] resolvers) => resolvers.Length switch
+    {
+        0 => null,
+        1 => resolvers[0],
+        _ => CompositeResolver.Create(resolvers),
+    };
 
 
     public static void MapSignalRemsPublisherHub(this WebApplication app, string endpoint)

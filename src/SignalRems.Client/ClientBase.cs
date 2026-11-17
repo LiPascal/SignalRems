@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MessagePack.Resolvers;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,7 +15,9 @@ namespace SignalRems.Client;
 
 public abstract class ClientBase : IClient
 {
-    private bool _disposed = false;
+    private volatile bool _disposed = false;
+    private int _connectLoopRunning;
+    private CancellationTokenSource _lifetimeCts = new();
     private TaskCompletionSource _connectionCompletionSource = new();
 
     protected ClientBase(ILogger logger)
@@ -28,6 +29,11 @@ public abstract class ClientBase : IClient
 
     public Task ConnectAsync(string url, string endpoint, CancellationToken token)
     {
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(ClientBase));
+        }
+
         ChangeConnectionStatus(ConnectionStatus.Connecting);
         if (Connection != null)
         {
@@ -35,47 +41,36 @@ public abstract class ClientBase : IClient
         }
 
         Url = url + endpoint;
+        // The lifetime source combines the caller's token with Dispose(): cancelling either one stops connecting and
+        // releases calls that are waiting for a reconnect. Replace the previous one only after cancelling it, so a
+        // second ConnectAsync call (possible after a connect loop gave up) also stops the previous lifetime's waiters
+        // and unlinks it from the caller's token.
+        var previousLifetime = _lifetimeCts;
+        _lifetimeCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        previousLifetime.Cancel();
         var builder = new HubConnectionBuilder()
             .WithUrl(Url)
             .WithAutomaticReconnect(new RetryPolicy(Logger, Url));
-        builder = builder.AddJsonProtocol(config =>
+        if (SerializeUtil.UseMessagePack)
         {
-            foreach (var converter in SerializeUtil.Converters)
+            builder = builder.AddMessagePackProtocol(o => o.SerializerOptions = SerializeUtil.ApplyToHubProtocol(o.SerializerOptions));
+        }
+        else
+        {
+            builder = builder.AddJsonProtocol(config =>
             {
-                config.PayloadSerializerOptions.Converters.Add(converter);
-            }
-        });
+                foreach (var converter in SerializeUtil.Converters)
+                {
+                    config.PayloadSerializerOptions.Converters.Add(converter);
+                }
+            });
+        }
         Connection = builder.Build();
         OnConnectionCreated(Connection);
         Connection.Reconnecting += ConnectionOnReconnecting;
         Connection.Reconnected += ConnectionOnReconnected;
-        Connection.Closed += ConnectionOnClosed;        
-        var retryAfter = 1;
-        Task.Run(async () =>
-        {
-            while (true)
-            {
-                try
-                {
-                    await Connection.StartAsync(token);
-                    ChangeConnectionStatus(ConnectionStatus.Connected);
-                    Logger.LogInformation("Connected to {0}, {1}", url, endpoint);
-                    return;
-                }
-                catch when (token.IsCancellationRequested)
-                {
-                    Connection = null;
-                    ChangeConnectionStatus(ConnectionStatus.Disconnected);
-                    return;
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError("Failed to connect server. Retry after {sec} seconds: {msg}", retryAfter, e.Message);
-                    await Task.Delay(retryAfter * 1000, new CancellationToken());
-                    retryAfter = Math.Min(retryAfter * 2, 60);
-                }
-            }
-        }, token);
+        Connection.Closed += ConnectionOnClosed;
+        EnsureConnectionStarted(Connection, _lifetimeCts.Token);
         return Task.CompletedTask;
     }
 
@@ -93,6 +88,7 @@ public abstract class ClientBase : IClient
         }
 
         _disposed = true;
+        _lifetimeCts.Cancel();
         DoDispose();
         GC.SuppressFinalize(this);
     }
@@ -107,6 +103,45 @@ public abstract class ClientBase : IClient
     protected string? Url { get; private set; }
 
     protected ILogger Logger { get; }
+
+    protected bool IsConnected => !_disposed
+                                  && ConnectionStatus == ConnectionStatus.Connected
+                                  && Connection is { State: HubConnectionState.Connected };
+
+    /// <summary>
+    /// Waits until the connection can send messages again. Returns <c>false</c> when the client was disposed or the
+    /// lifetime token passed to <see cref="ConnectAsync"/> was cancelled before a connection could be re-established.
+    /// </summary>
+    protected async Task<bool> WaitForConnectedAsync()
+    {
+        while (!_disposed)
+        {
+            if (IsConnected)
+            {
+                return true;
+            }
+
+            var completionSource = _connectionCompletionSource;
+            try
+            {
+                if (completionSource.Task.IsCompleted)
+                {
+                    // Status and hub state are reported by different sources, give them a moment to agree.
+                    await Task.Delay(50, _lifetimeCts.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    await completionSource.Task.WaitAsync(_lifetimeCts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
 
     protected virtual void OnConnectionCreated(HubConnection connection)
     {
@@ -130,8 +165,18 @@ public abstract class ClientBase : IClient
     protected virtual Task ConnectionOnClosed(Exception? exception)
     {
         Logger.LogWarning("Lost connection to server.");
-        ChangeConnectionStatus(ConnectionStatus.Disconnected);
-        Connection = null;
+        var connection = Connection;
+        if (_disposed || connection == null)
+        {
+            Connection = null;
+            ChangeConnectionStatus(ConnectionStatus.Disconnected);
+            return Task.CompletedTask;
+        }
+
+        // SignalR stops trying once a connection is closed, but the connection instance can be started again.
+        // Keeping the same instance alive preserves the registered handlers, so the client stays usable.
+        ChangeConnectionStatus(ConnectionStatus.Connecting);
+        EnsureConnectionStarted(connection, _lifetimeCts.Token);
         return Task.CompletedTask;
     }
 
@@ -151,6 +196,70 @@ public abstract class ClientBase : IClient
 
     #region private
 
+    private void EnsureConnectionStarted(HubConnection connection, CancellationToken token)
+    {
+        if (_disposed || Interlocked.Exchange(ref _connectLoopRunning, 1) == 1)
+        {
+            return;
+        }
+
+        Task.Run(async () =>
+        {
+            var connected = false;
+            try
+            {
+                connected = await StartConnectionAsync(connection, token).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Release the guard before dropping the connection, otherwise a ConnectAsync called at this moment
+                // would see the flag still set and never start a new attempt.
+                Interlocked.Exchange(ref _connectLoopRunning, 0);
+                if (!connected && !_disposed && ReferenceEquals(Connection, connection))
+                {
+                    Connection = null;
+                    ChangeConnectionStatus(ConnectionStatus.Disconnected);
+                }
+            }
+        }, CancellationToken.None);
+    }
+
+    private async Task<bool> StartConnectionAsync(HubConnection connection, CancellationToken token)
+    {
+        var retryAfter = 1;
+        while (!_disposed && ReferenceEquals(Connection, connection))
+        {
+            try
+            {
+                await connection.StartAsync(token).ConfigureAwait(false);
+                ChangeConnectionStatus(ConnectionStatus.Connected);
+                Logger.LogInformation("Connected to {0}", Url);
+                return true;
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                Logger.LogWarning("Connecting to {0} was cancelled", Url);
+                break;
+            }
+            catch (Exception e)
+            {
+                Logger.LogError("Failed to connect server. Retry after {sec} seconds: {msg}", retryAfter, e.Message);
+                try
+                {
+                    await Task.Delay(retryAfter * 1000, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+
+                retryAfter = Math.Min(retryAfter * 2, 60);
+            }
+        }
+
+        return false;
+    }
+
     private void ChangeConnectionStatus(ConnectionStatus status)
     {
         if (status == ConnectionStatus)
@@ -166,7 +275,7 @@ public abstract class ClientBase : IClient
         ConnectionStatus = status;
         if (ConnectionStatus == ConnectionStatus.Connected)
         {
-            _connectionCompletionSource.SetResult();
+            _connectionCompletionSource.TrySetResult();
         }
         handler?.Invoke(this, new ConnectionStatusChangedEventArgs(status));
     }
